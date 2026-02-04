@@ -12,3 +12,15 @@ remappings = [
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+# Network configurations
+[rpc_endpoints]
+base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
+
+[etherscan]
+base_sepolia = { key = "${BASESCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=84532", chain = 84532 }
+
+# Base Sepolia network profile
+[profile.base_sepolia]
+chain_id = 84532
+rpc_url = "${BASE_SEPOLIA_RPC_URL}"

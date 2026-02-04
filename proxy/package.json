@@ -4,11 +4,17 @@
   "description": "PragmaMoney x402 payment proxy server with dual payment verification",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/server.ts",
+    "dev": "nodemon --exec tsx src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test:x402": "tsx scripts/test-x402.ts"
   },
   "dependencies": {
+    "@coinbase/cdp-sdk": "^1.44.0",
+    "@x402/core": "^2.2.0",
+    "@x402/evm": "^2.2.0",
+    "@x402/express": "^2.2.0",
+    "axios": "^1.13.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.1",
@@ -22,6 +28,7 @@
     "@types/node-fetch": "^2.6.11",
     "nodemon": "^3.1.3",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.4.5"
   }
 }
