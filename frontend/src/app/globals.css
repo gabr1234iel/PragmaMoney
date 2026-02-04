@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-body text-lobster-dark bg-lobster-bg antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  /* Custom scrollbar styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-lobster-surface rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-lobster-primary rounded-full hover:bg-lobster-hover;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-lobster-accent;
+  }
+
+  /* Apply to body by default */
+  body {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.lobster-primary') theme('colors.lobster-surface');
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-lobster-primary text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:bg-lobster-hover hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-lobster-primary focus:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-lobster-primary border-2 border-lobster-primary px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:bg-lobster-surface hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-lobster-primary focus:ring-offset-2;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-md p-6 transition-all duration-200 hover:shadow-lg;
+  }
+
+  .card-hover {
+    @apply bg-white rounded-2xl shadow-md p-6 transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-lobster-border bg-white text-lobster-dark placeholder:text-lobster-text/40 focus:outline-none focus:ring-2 focus:ring-lobster-primary focus:border-transparent transition-all duration-200;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  .skeleton {
+    @apply animate-pulse bg-gradient-to-r from-lobster-surface via-lobster-border to-lobster-surface bg-[length:200%_100%] rounded;
+  }
+}
+
+/* Loading animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  @apply outline-none ring-2 ring-lobster-primary ring-offset-2;
+}
+
+/* Selection styling */
+::selection {
+  @apply bg-lobster-primary/20 text-lobster-dark;
+}
