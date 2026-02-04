@@ -12,3 +12,22 @@ docs/
 
 # Dotenv file
 .env
+.env.local
+.env.example
+
+# Dependencies
+node_modules/
+
+# Next.js
+frontend/.next/
+frontend/out/
+
+# Reference projects
+/n8n-nodes-1shot
+/x402
+/agents-in-action-hackathon-ai402
+/nano-banana-blockrun
+
+# Misc
+.DS_Store
+*.log
