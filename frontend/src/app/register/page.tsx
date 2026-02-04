@@ -1,0 +1,417 @@
+"use client";
+
+import { useState } from "react";
+import { useAccount } from "wagmi";
+import { ServiceType, SERVICE_TYPE_LABELS } from "@/types";
+import { parseUSDC, formatUSDC } from "@/lib/utils";
+import { CheckCircle, AlertCircle, Wallet, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export default function RegisterPage() {
+  const { address, isConnected } = useAccount();
+
+  const [formData, setFormData] = useState({
+    name: "",
+    serviceId: "",
+    serviceType: ServiceType.API,
+    pricePerCall: "",
+    endpoint: "",
+    description: "",
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [autoGenerateId, setAutoGenerateId] = useState(true);
+
+  const generateServiceId = (name: string): string => {
+    const cleaned = name.toLowerCase().replace(/[^a-z0-9]/g, "-");
+    const timestamp = Date.now().toString(36);
+    return `${cleaned}-${timestamp}`;
+  };
+
+  const handleNameChange = (name: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      name,
+      serviceId: autoGenerateId ? generateServiceId(name) : prev.serviceId,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      // Validate form
+      if (!formData.name || !formData.endpoint || !formData.pricePerCall) {
+        throw new Error("Please fill in all required fields");
+      }
+
+      // Validate price
+      const priceInSmallestUnit = parseUSDC(formData.pricePerCall);
+      if (priceInSmallestUnit <= 0) {
+        throw new Error("Price must be greater than 0");
+      }
+
+      // Validate endpoint URL
+      try {
+        new URL(formData.endpoint);
+      } catch {
+        throw new Error("Please enter a valid endpoint URL");
+      }
+
+      // Simulate contract interaction
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // TODO: Replace with actual contract call
+      // const tx = await writeContract({
+      //   address: SERVICE_REGISTRY_ADDRESS,
+      //   abi: SERVICE_REGISTRY_ABI,
+      //   functionName: 'registerService',
+      //   args: [
+      //     formData.serviceId,
+      //     priceInSmallestUnit,
+      //     formData.endpoint,
+      //     formData.serviceType,
+      //   ],
+      // });
+      // await waitForTransaction(tx);
+
+      setSubmitSuccess(true);
+
+      // Reset form after success
+      setTimeout(() => {
+        setFormData({
+          name: "",
+          serviceId: "",
+          serviceType: ServiceType.API,
+          pricePerCall: "",
+          endpoint: "",
+          description: "",
+        });
+        setSubmitSuccess(false);
+      }, 3000);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Registration failed");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen py-12">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="card text-center py-16">
+            <div className="w-24 h-24 bg-lobster-surface rounded-full flex items-center justify-center mx-auto mb-6">
+              <Wallet className="w-12 h-12 text-lobster-text" />
+            </div>
+            <h2 className="font-display text-3xl font-bold text-lobster-dark mb-4">
+              Connect Your Wallet
+            </h2>
+            <p className="text-lobster-text">
+              You need to connect your wallet to register a new service.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-12">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-12 text-center">
+          <h1 className="font-display text-5xl font-bold text-lobster-dark mb-4">
+            Register Your Service
+          </h1>
+          <p className="text-xl text-lobster-text max-w-2xl mx-auto">
+            List your API or service on PragmaMoney and start earning USDC for every
+            call
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-5 gap-8">
+          {/* Form */}
+          <div className="lg:col-span-3">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="card">
+                <h2 className="font-display text-2xl font-semibold text-lobster-dark mb-6">
+                  Service Details
+                </h2>
+
+                {/* Service Name */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-lobster-dark mb-2">
+                    Service Name <span className="text-lobster-primary">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    placeholder="e.g., GPT-4 Inference API"
+                    className="input-field"
+                  />
+                </div>
+
+                {/* Service ID */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-lobster-dark">
+                      Service ID {!autoGenerateId && <span className="text-lobster-primary">*</span>}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAutoGenerateId(!autoGenerateId);
+                        if (autoGenerateId) {
+                          setFormData((prev) => ({ ...prev, serviceId: "" }));
+                        } else {
+                          setFormData((prev) => ({
+                            ...prev,
+                            serviceId: generateServiceId(prev.name),
+                          }));
+                        }
+                      }}
+                      className="text-sm text-lobster-primary hover:text-lobster-hover transition-colors duration-200"
+                    >
+                      {autoGenerateId ? "Custom ID" : "Auto-generate"}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required={!autoGenerateId}
+                    disabled={autoGenerateId}
+                    value={formData.serviceId}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, serviceId: e.target.value }))
+                    }
+                    placeholder="service-id-123"
+                    className={cn(
+                      "input-field",
+                      autoGenerateId && "bg-lobster-surface cursor-not-allowed"
+                    )}
+                  />
+                  <p className="text-xs text-lobster-text mt-1">
+                    Unique identifier for your service
+                  </p>
+                </div>
+
+                {/* Service Type */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-lobster-dark mb-2">
+                    Service Type <span className="text-lobster-primary">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {Object.entries(SERVICE_TYPE_LABELS).map(([key, label]) => {
+                      const typeValue = Number(key) as ServiceType;
+                      const isSelected = formData.serviceType === typeValue;
+
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({ ...prev, serviceType: typeValue }))
+                          }
+                          className={cn(
+                            "px-4 py-3 rounded-xl font-medium transition-all duration-200 border-2",
+                            isSelected
+                              ? "bg-lobster-primary text-white border-lobster-primary shadow-md"
+                              : "bg-white text-lobster-dark border-lobster-border hover:bg-lobster-surface"
+                          )}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Price */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-lobster-dark mb-2">
+                    Price per Call (USDC) <span className="text-lobster-primary">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lobster-text font-semibold">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      min="0"
+                      required
+                      value={formData.pricePerCall}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, pricePerCall: e.target.value }))
+                      }
+                      placeholder="1.00"
+                      className="input-field pl-8"
+                    />
+                  </div>
+                  <p className="text-xs text-lobster-text mt-1">
+                    Amount charged for each API call
+                  </p>
+                </div>
+
+                {/* Endpoint */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-lobster-dark mb-2">
+                    Endpoint URL <span className="text-lobster-primary">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    value={formData.endpoint}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, endpoint: e.target.value }))
+                    }
+                    placeholder="https://api.example.com/v1/service"
+                    className="input-field"
+                  />
+                  <p className="text-xs text-lobster-text mt-1">
+                    Your service's API endpoint URL
+                  </p>
+                </div>
+
+                {/* Description */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-lobster-dark mb-2">
+                    Description (Optional)
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                    placeholder="Describe what your service does..."
+                    rows={4}
+                    className="input-field resize-none"
+                  />
+                </div>
+
+                {/* Error Message */}
+                {submitError && (
+                  <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                    <div className="flex items-start space-x-2 text-red-700">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold mb-1">Registration Failed</p>
+                        <p className="text-sm">{submitError}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Success Message */}
+                {submitSuccess && (
+                  <div className="mb-6 bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                    <div className="flex items-center space-x-2 text-green-700">
+                      <CheckCircle className="w-5 h-5" />
+                      <p className="font-semibold">Service registered successfully!</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting || submitSuccess}
+                  className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Registering...</span>
+                    </>
+                  ) : submitSuccess ? (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      <span>Registered!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      <span>Register Service</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Preview */}
+          <div className="lg:col-span-2">
+            <div className="sticky top-24 space-y-6">
+              <div className="card">
+                <h3 className="font-display text-xl font-semibold text-lobster-dark mb-4">
+                  Preview
+                </h3>
+                <p className="text-sm text-lobster-text mb-4">
+                  This is how your service will appear in the marketplace
+                </p>
+
+                <div className="card-hover">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <h4 className="font-display text-lg font-semibold text-lobster-dark mb-2">
+                        {formData.name || "Service Name"}
+                      </h4>
+                      <span className="badge bg-lobster-surface text-lobster-primary border border-lobster-border">
+                        {SERVICE_TYPE_LABELS[formData.serviceType]}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1 text-green-600">
+                      <span className="w-2 h-2 bg-green-500 rounded-full" />
+                      <span className="text-xs font-medium">Active</span>
+                    </div>
+                  </div>
+
+                  {formData.description && (
+                    <p className="text-sm text-lobster-text mb-4 line-clamp-2">
+                      {formData.description}
+                    </p>
+                  )}
+
+                  {formData.endpoint && (
+                    <div className="text-xs text-lobster-text/60 mb-4 font-mono truncate">
+                      {formData.endpoint}
+                    </div>
+                  )}
+
+                  <div className="pt-4 border-t border-lobster-border">
+                    <p className="text-xs text-lobster-text mb-1">Price per Call</p>
+                    <p className="font-display text-2xl font-bold text-lobster-primary">
+                      ${formData.pricePerCall || "0.00"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Card */}
+              <div className="card bg-blue-50 border-2 border-blue-200">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="w-5 h-5 text-blue-700 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-semibold mb-2">Before you register:</p>
+                    <ul className="space-y-1 list-disc list-inside">
+                      <li>Ensure your endpoint is publicly accessible</li>
+                      <li>Your service should support x402 payment headers</li>
+                      <li>Set a fair price based on your service cost</li>
+                      <li>Registration requires a small gas fee</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
