@@ -12,6 +12,7 @@ import {
   Wallet, ExternalLink, Loader2, CheckCircle, AlertCircle, Lock, Unlock,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function PoolPage({ params }: { params: { address: string } }) {
   const poolAddress = params.address as Address;
@@ -180,7 +181,13 @@ export default function PoolPage({ params }: { params: { address: string } }) {
   };
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-12 relative">
+      <div className="absolute top-24 left-6 pointer-events-none hidden xl:block -rotate-12 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={65} height={65} />
+      </div>
+      <div className="absolute top-48 right-8 pointer-events-none hidden xl:block rotate-6 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={72} height={72} />
+      </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">

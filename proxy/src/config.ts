@@ -27,10 +27,10 @@ export const config: Config = {
     process.env.FACILITATOR_URL || "https://x402.org/facilitator",
   gatewayAddress:
     process.env.GATEWAY_ADDRESS ||
-    "0xDB80b0ea3D7183667Fb83Ee3f22498d0BB33Bb38",
+    "0x3F13150Af381BE0Aa484630Bf72Ccf3cfAC4089A",
   serviceRegistryAddress:
     process.env.SERVICE_REGISTRY_ADDRESS ||
-    "0x5Ba93c70c5E874B1ff4cb2B1d0Dd30B63F859049",
+    "0xe232b66B144C2cE3ec6174cEF704B3576d6cDa84",
   gatewayRpcUrl:
     process.env.GATEWAY_RPC_URL || "https://sepolia.base.org",
   usdcAddress:
