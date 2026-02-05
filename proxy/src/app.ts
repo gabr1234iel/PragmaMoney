@@ -3,6 +3,7 @@ import cors from "cors";
 
 import { config } from "./config.js";
 import { createX402Gate } from "./middleware/x402Gate.js";
+import { adminAuth } from "./middleware/adminAuth.js";
 import {
   getAllResources,
   registerResource,
@@ -30,8 +31,14 @@ app.use(
       "Authorization",
       "x-payment",
       "x-payment-id",
+      "PAYMENT-SIGNATURE",
+      "Access-Control-Expose-Headers",
     ],
-    exposedHeaders: ["X-PAYMENT-RESPONSE"],
+    exposedHeaders: [
+      "X-PAYMENT-RESPONSE",
+      "PAYMENT-REQUIRED",
+      "PAYMENT-RESPONSE",
+    ],
   })
 );
 
@@ -66,9 +73,11 @@ interface RegisterBody {
   creatorAddress?: string;
   originalUrl?: string;
   pricing?: { pricePerCall?: string; currency?: "USDC" };
+  apiKey?: string;
+  apiKeyHeader?: string;
 }
 
-app.post("/admin/register", (req: Request, res: Response) => {
+app.post("/admin/register", adminAuth(), (req: Request, res: Response) => {
   const body = req.body as RegisterBody;
 
   if (
@@ -102,6 +111,8 @@ app.post("/admin/register", (req: Request, res: Response) => {
       pricePerCall: body.pricing.pricePerCall,
       currency: "USDC",
     },
+    apiKey: body.apiKey,
+    apiKeyHeader: body.apiKeyHeader,
   });
 
   res.status(201).json(resource);
@@ -138,12 +149,18 @@ async function proxyHandler(req: Request, res: Response): Promise<void> {
 
 // With trailing path: /proxy/:resourceId/extra/path...
 app.all("/proxy/:resourceId/*", x402Gate, (req: Request, res: Response) => {
-  void proxyHandler(req, res);
+  proxyHandler(req, res).catch((err) => {
+    console.error("[proxy] handler error:", err);
+    if (!res.headersSent) res.status(500).json({ error: "Internal proxy error" });
+  });
 });
 
 // Without trailing path: /proxy/:resourceId
 app.all("/proxy/:resourceId", x402Gate, (req: Request, res: Response) => {
-  void proxyHandler(req, res);
+  proxyHandler(req, res).catch((err) => {
+    console.error("[proxy] handler error:", err);
+    if (!res.headersSent) res.status(500).json({ error: "Internal proxy error" });
+  });
 });
 
 // ---------------------------------------------------------------------------

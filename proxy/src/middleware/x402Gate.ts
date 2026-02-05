@@ -6,13 +6,15 @@ import { getResource } from "../services/resourceStore.js";
 import {
   verifyPayment as facilitatorVerify,
   settlePayment as facilitatorSettle,
+  decodePaymentHeader,
 } from "../services/facilitator.js";
 import {
   createTransaction,
   recordTransaction,
+  isPaymentIdUsed,
+  markPaymentIdUsed,
 } from "../models/Transaction.js";
 import type {
-  PaymentRequirements,
   PaymentRequirementsAccept,
   X402ErrorResponse,
 } from "../types/x402.js";
@@ -23,6 +25,7 @@ import type {
 
 const GATEWAY_ABI = [
   "function verifyPayment(bytes32 paymentId) view returns (bool valid, address payer, uint256 amount)",
+  "function getPayment(bytes32 paymentId) view returns (tuple(address payer, bytes32 serviceId, uint256 calls, uint256 amount, uint256 timestamp))",
 ];
 
 // ---------------------------------------------------------------------------
@@ -61,18 +64,25 @@ function isFreeRequest(req: Request): boolean {
  * Build the standard x402 PaymentRequirementsAccept block for a resource.
  */
 function buildAccept(
-  resource: { creatorAddress: string; pricing: { pricePerCall: string } },
+  resource: { name: string; creatorAddress: string; pricing: { pricePerCall: string } },
   requestUrl: string
 ): PaymentRequirementsAccept {
+  // x402-axios requires `resource` to be a full URL
+  const fullUrl = requestUrl.startsWith("http")
+    ? requestUrl
+    : `http://localhost:${config.port}${requestUrl}`;
+
   return {
     scheme: "exact",
     network: "base-sepolia",
     maxAmountRequired: resource.pricing.pricePerCall,
-    resource: requestUrl,
+    resource: fullUrl,
+    description: resource.name,
+    mimeType: "application/json",
     payTo: resource.creatorAddress,
     maxTimeoutSeconds: 60,
     asset: config.usdcAddress,
-    extra: { name: "USDC", version: "1" },
+    extra: { name: "USDC", version: "2" },
   };
 }
 
@@ -111,10 +121,6 @@ export function createX402Gate(): RequestHandler {
     }
 
     const accept = buildAccept(resource, req.originalUrl);
-    const requirements: PaymentRequirements = {
-      x402Version: 1,
-      accepts: [accept],
-    };
 
     // ------------------------------------------------------------------
     // Path A: x-payment header (x402 facilitator for end users)
@@ -122,11 +128,19 @@ export function createX402Gate(): RequestHandler {
     const paymentHeader = req.headers["x-payment"] as string | undefined;
     if (paymentHeader) {
       try {
-        // Verify
-        const verifyResult = await facilitatorVerify(
-          paymentHeader,
-          requirements
-        );
+        // Decode the base64-encoded X-PAYMENT header into a typed object
+        let decodedPayload;
+        try {
+          decodedPayload = decodePaymentHeader(paymentHeader);
+        } catch {
+          res.status(400).json({ error: "Malformed X-PAYMENT header" });
+          return;
+        }
+
+        console.log(`[x402Gate] Decoded payment: scheme=${decodedPayload.scheme}, network=${decodedPayload.network}, from=${decodedPayload.payload?.authorization?.from}`);
+
+        // Verify (pass decoded payload + single accept requirement)
+        const verifyResult = await facilitatorVerify(decodedPayload, accept);
 
         if (!verifyResult.valid) {
           res.status(402).json({
@@ -137,10 +151,7 @@ export function createX402Gate(): RequestHandler {
         }
 
         // Settle
-        const settleResult = await facilitatorSettle(
-          paymentHeader,
-          requirements
-        );
+        const settleResult = await facilitatorSettle(decodedPayload, accept);
 
         if (!settleResult.success) {
           res.status(402).json({
@@ -156,9 +167,10 @@ export function createX402Gate(): RequestHandler {
         }
 
         // Record audit trail
+        const payer = decodedPayload.payload?.authorization?.from ?? "x402-user";
         const tx = createTransaction({
           resourceId: resource.id,
-          payer: "x402-user", // real payer is inside the signed payload
+          payer,
           amount: resource.pricing.pricePerCall,
           method: "x402",
           status: "settled",
@@ -182,6 +194,15 @@ export function createX402Gate(): RequestHandler {
     const paymentId = req.headers["x-payment-id"] as string | undefined;
     if (paymentId) {
       try {
+        // Replay protection: reject already-used paymentIds
+        if (isPaymentIdUsed(paymentId)) {
+          res.status(402).json({
+            error: "Payment already used",
+            paymentId,
+          });
+          return;
+        }
+
         const provider = new ethers.JsonRpcProvider(config.gatewayRpcUrl);
         const gateway = new ethers.Contract(
           config.gatewayAddress,
@@ -212,6 +233,9 @@ export function createX402Gate(): RequestHandler {
           return;
         }
 
+        // Mark paymentId as used (prevents replay)
+        markPaymentIdUsed(paymentId);
+
         // Record audit trail
         const tx = createTransaction({
           resourceId: resource.id,
@@ -219,6 +243,7 @@ export function createX402Gate(): RequestHandler {
           amount: amount.toString(),
           method: "gateway",
           status: "verified",
+          paymentId,
         });
         recordTransaction(tx);
 
@@ -244,6 +269,10 @@ export function createX402Gate(): RequestHandler {
       serviceId: resourceId,
     };
 
+    res.setHeader(
+      "PAYMENT-REQUIRED",
+      Buffer.from(JSON.stringify(errorBody)).toString("base64")
+    );
     res.status(402).json(errorBody);
   };
 }

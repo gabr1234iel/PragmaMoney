@@ -14,6 +14,7 @@ export function createTransaction(params: {
   amount: string;
   method: PaymentMethod;
   status?: TransactionStatus;
+  paymentId?: string;
 }): Transaction {
   return {
     id: randomUUID(),
@@ -23,7 +24,19 @@ export function createTransaction(params: {
     method: params.method,
     timestamp: Date.now(),
     status: params.status ?? "pending",
+    paymentId: params.paymentId,
   };
+}
+
+/** Track used paymentIds to prevent replay attacks. */
+const usedPaymentIds = new Set<string>();
+
+export function isPaymentIdUsed(id: string): boolean {
+  return usedPaymentIds.has(id);
+}
+
+export function markPaymentIdUsed(id: string): void {
+  usedPaymentIds.add(id);
 }
 
 /** Simple in-memory transaction log. */

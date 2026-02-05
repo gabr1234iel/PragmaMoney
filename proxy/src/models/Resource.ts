@@ -10,6 +10,8 @@ export function createResource(params: {
   creatorAddress: string;
   originalUrl: string;
   pricing: ResourcePricing;
+  apiKey?: string;
+  apiKeyHeader?: string;
 }): Resource {
   return {
     id: params.id,
@@ -19,6 +21,8 @@ export function createResource(params: {
     originalUrl: params.originalUrl,
     proxyUrl: `/proxy/${params.id}`,
     pricing: params.pricing,
+    apiKey: params.apiKey,
+    apiKeyHeader: params.apiKeyHeader,
   };
 }
 

@@ -31,3 +31,16 @@ frontend/out/
 # Misc
 .DS_Store
 *.log
+
+# Proxy
+/proxy/dist
+/proxy/data/
+
+.next
+
+.claude
+.cursor
+
+cdp_api_key*.json
+
+docs.zip

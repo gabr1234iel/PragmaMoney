@@ -9,6 +9,7 @@ export interface Config {
   usdcAddress: string;
   allowedOrigins: string[];
   serviceRegistryAddress: string;
+  adminToken: string;
 }
 
 function parseOrigins(raw: string | undefined): string[] {
@@ -25,12 +26,14 @@ export const config: Config = {
     process.env.FACILITATOR_URL || "https://x402.org/facilitator",
   gatewayAddress:
     process.env.GATEWAY_ADDRESS ||
-    "0x8AAC03d1eD23223583cc47FcEc7d656F82116eD4",
+    "0x6ee8F65106AEb03E84c31F82f7DE821c97d7D8b6",
   serviceRegistryAddress:
     process.env.SERVICE_REGISTRY_ADDRESS ||
-    "0x346C7CF4250dfB731Df26913a9B9285448C3828A",
+    "0x2112837f86c6aB7D4acA2B71df9944Ccc64f743A",
   gatewayRpcUrl:
     process.env.GATEWAY_RPC_URL || "https://sepolia.base.org",
-  usdcAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  usdcAddress:
+    process.env.USDC_ADDRESS || "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
   allowedOrigins: parseOrigins(process.env.ALLOWED_ORIGINS),
+  adminToken: process.env.ADMIN_TOKEN || "",
 };

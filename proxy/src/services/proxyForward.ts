@@ -18,6 +18,13 @@ const HOP_BY_HOP_HEADERS = new Set([
   "transfer-encoding",
   "upgrade",
   "host",
+  "accept-encoding", // Don't forward — node-fetch v2 can't decompress br/zstd
+]);
+
+/** PragmaMoney-internal headers that should not leak to upstream services. */
+const INTERNAL_HEADERS = new Set([
+  "x-payment",
+  "x-payment-id",
 ]);
 
 export interface ForwardResult {
@@ -43,12 +50,19 @@ export async function forwardRequest(
       (req.params as Record<string, string>)["0"] ?? "";
     const targetUrl = resource.originalUrl + trailingPath;
 
-    // Filter hop-by-hop headers from the incoming request.
+    // Filter hop-by-hop and internal headers from the incoming request.
     const forwardHeaders: Record<string, string> = {};
     for (const [key, value] of Object.entries(req.headers)) {
-      if (HOP_BY_HOP_HEADERS.has(key.toLowerCase())) continue;
+      const lk = key.toLowerCase();
+      if (HOP_BY_HOP_HEADERS.has(lk) || INTERNAL_HEADERS.has(lk)) continue;
       if (value === undefined) continue;
       forwardHeaders[key] = Array.isArray(value) ? value.join(", ") : value;
+    }
+
+    // Inject API key for wrapped upstream services
+    if (resource.apiKey) {
+      const header = resource.apiKeyHeader ?? "Authorization";
+      forwardHeaders[header.toLowerCase()] = resource.apiKey;
     }
 
     // Determine request body -- only send for methods that support it.
@@ -68,10 +82,16 @@ export async function forwardRequest(
       timeout: 30_000, // 30 s upstream timeout
     });
 
-    // Collect response headers, stripping hop-by-hop.
+    // Collect response headers, stripping hop-by-hop and content-encoding/length
+    // (we re-serialize the body, so these won't match the original).
+    const SKIP_RESPONSE_HEADERS = new Set([
+      ...HOP_BY_HOP_HEADERS,
+      "content-encoding",
+      "content-length",
+    ]);
     const responseHeaders: Record<string, string> = {};
     upstream.headers.forEach((value, key) => {
-      if (!HOP_BY_HOP_HEADERS.has(key.toLowerCase())) {
+      if (!SKIP_RESPONSE_HEADERS.has(key.toLowerCase())) {
         responseHeaders[key] = value;
       }
     });

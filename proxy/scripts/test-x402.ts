@@ -379,11 +379,12 @@ async function main() {
   // Step 5: Register service in proxy (if not exists)
   console.log("🌐 Step 5: Setting up proxy service...");
   const resourceId = "test-service-1";
-  
+  const adminToken = process.env.ADMIN_TOKEN || "test-secret";
+
   try {
     const servicesResponse = await axios.get(`${PROXY_URL}/services`);
     const existingService = servicesResponse.data.find((s: any) => s.id === resourceId);
-    
+
     if (!existingService) {
       console.log(`  Registering service in proxy...`);
       await axios.post(`${PROXY_URL}/admin/register`, {
@@ -396,6 +397,8 @@ async function main() {
           pricePerCall: totalCost.toString(),
           currency: "USDC",
         },
+      }, {
+        headers: { Authorization: `Bearer ${adminToken}` },
       });
       console.log(`  ✓ Service registered in proxy\n`);
     } else {
@@ -442,6 +445,26 @@ async function main() {
     if (error.response?.status === 402) {
       console.log(`  ✓ Correctly rejected with 402 Payment Required`);
       console.log(`    Response:`, JSON.stringify(error.response.data, null, 2).substring(0, 200) + "...\n");
+    } else {
+      console.error(`  ✗ Unexpected error: ${error.message}\n`);
+    }
+  }
+
+  // Step 8: Test replay protection (should fail with "Payment already used")
+  console.log("🔁 Step 8: Testing replay protection (reusing same paymentId)...");
+  try {
+    await axios.get(`${PROXY_URL}/proxy/${resourceId}`, {
+      headers: {
+        "x-payment-id": paymentIdHex,
+      },
+    });
+    console.error(`  ✗ Unexpected: Replay succeeded! Replay protection is broken!\n`);
+  } catch (error: any) {
+    if (error.response?.status === 402 && error.response.data?.error?.includes("already used")) {
+      console.log(`  ✓ Correctly rejected with: "${error.response.data.error}"`);
+      console.log(`  ✓ Replay protection is working!\n`);
+    } else if (error.response?.status === 402) {
+      console.log(`  ✓ Rejected with 402: "${error.response.data.error}"\n`);
     } else {
       console.error(`  ✗ Unexpected error: ${error.message}\n`);
     }

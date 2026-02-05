@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { keccak256, toHex } from "viem";
 import { ServiceType, SERVICE_TYPE_LABELS } from "@/types";
-import { parseUSDC, formatUSDC } from "@/lib/utils";
+import { parseUSDC } from "@/lib/utils";
+import { SERVICE_REGISTRY_ADDRESS, SERVICE_REGISTRY_ABI } from "@/lib/contracts";
 import { CheckCircle, AlertCircle, Wallet, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +25,14 @@ export default function RegisterPage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [autoGenerateId, setAutoGenerateId] = useState(true);
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
+
+  const PROXY_URL = process.env.NEXT_PUBLIC_PROXY_URL || "http://localhost:4402";
+
+  const { writeContractAsync } = useWriteContract();
+  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
 
   const generateServiceId = (name: string): string => {
     const cleaned = name.toLowerCase().replace(/[^a-z0-9]/g, "-");
@@ -62,22 +72,46 @@ export default function RegisterPage() {
         throw new Error("Please enter a valid endpoint URL");
       }
 
-      // Simulate contract interaction
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Generate bytes32 serviceId from the string
+      const serviceIdBytes32 = keccak256(toHex(formData.serviceId));
 
-      // TODO: Replace with actual contract call
-      // const tx = await writeContract({
-      //   address: SERVICE_REGISTRY_ADDRESS,
-      //   abi: SERVICE_REGISTRY_ABI,
-      //   functionName: 'registerService',
-      //   args: [
-      //     formData.serviceId,
-      //     priceInSmallestUnit,
-      //     formData.endpoint,
-      //     formData.serviceType,
-      //   ],
-      // });
-      // await waitForTransaction(tx);
+      // Use the bytes32 hex as the proxy resource ID (canonical on-chain identifier)
+      const proxyResourceId = serviceIdBytes32;
+      const proxyEndpoint = `${PROXY_URL}/proxy/${proxyResourceId}`;
+
+      const hash = await writeContractAsync({
+        address: SERVICE_REGISTRY_ADDRESS,
+        abi: SERVICE_REGISTRY_ABI,
+        functionName: "registerService",
+        args: [
+          serviceIdBytes32,
+          priceInSmallestUnit,
+          proxyEndpoint,
+          formData.serviceType,
+        ],
+      });
+      setTxHash(hash);
+
+      // Register on proxy via server-side API route (keeps admin token private)
+      try {
+        await fetch("/api/register-proxy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: proxyResourceId,
+            name: formData.name,
+            type: formData.serviceType === 0 ? "COMPUTE" : formData.serviceType === 1 ? "STORAGE" : formData.serviceType === 2 ? "API" : formData.serviceType === 3 ? "AGENT" : "OTHER",
+            creatorAddress: address,
+            originalUrl: formData.endpoint,
+            pricing: {
+              pricePerCall: priceInSmallestUnit.toString(),
+              currency: "USDC",
+            },
+          }),
+        });
+      } catch (proxyErr) {
+        console.warn("Proxy registration failed (non-fatal):", proxyErr);
+      }
 
       setSubmitSuccess(true);
 
@@ -92,9 +126,16 @@ export default function RegisterPage() {
           description: "",
         });
         setSubmitSuccess(false);
+        setTxHash(undefined);
       }, 3000);
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Registration failed");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Registration failed";
+      if (message.includes("User rejected") || message.includes("denied")) {
+        setSubmitError("Transaction was rejected in wallet");
+      } else {
+        setSubmitError(message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -275,7 +316,9 @@ export default function RegisterPage() {
                     className="input-field"
                   />
                   <p className="text-xs text-lobster-text mt-1">
-                    Your service's API endpoint URL
+                    Your service's API endpoint URL. It will be wrapped by
+                    PragmaMoney's payment proxy — users will access it through the
+                    proxy URL.
                   </p>
                 </div>
 
@@ -321,13 +364,13 @@ export default function RegisterPage() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={isSubmitting || submitSuccess}
+                  disabled={isSubmitting || isConfirming || submitSuccess}
                   className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
-                  {isSubmitting ? (
+                  {isSubmitting || isConfirming ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Registering...</span>
+                      <span>{isConfirming ? "Confirming..." : "Registering..."}</span>
                     </>
                   ) : submitSuccess ? (
                     <>

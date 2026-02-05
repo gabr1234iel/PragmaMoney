@@ -1,10 +1,13 @@
 import { Address } from "viem";
 
-// Contract addresses on Base Sepolia
+// Contract addresses on Base Sepolia (deployed)
+// Real USDC — required by x402 facilitator (EIP-3009 support)
 export const USDC_ADDRESS: Address = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
-export const GATEWAY_ADDRESS: Address = "0x0000000000000000000000000000000000000000"; // TODO: Update after deployment
-export const SERVICE_REGISTRY_ADDRESS: Address = "0x0000000000000000000000000000000000000000"; // TODO: Update after deployment
-export const AGENT_FACTORY_ADDRESS: Address = "0x0000000000000000000000000000000000000000"; // TODO: Update after deployment
+// MockUSDC — used by deployed gateway/registry contracts for testing
+export const MOCK_USDC_ADDRESS: Address = "0x8E62c4749b6350943A52a34143C60EA36818f81F";
+export const GATEWAY_ADDRESS: Address = "0x6ee8F65106AEb03E84c31F82f7DE821c97d7D8b6";
+export const SERVICE_REGISTRY_ADDRESS: Address = "0x2112837f86c6aB7D4acA2B71df9944Ccc64f743A";
+export const AGENT_FACTORY_ADDRESS: Address = "0x77F3195CE8E69A76345dBfe5cdAa998a59dE99f5";
 
 // Minimal ABIs for contract interactions
 export const ERC20_ABI = [

@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePublicClient } from "wagmi";
+import { type Address } from "viem";
 import { SpendingPolicy, DailySpend } from "@/types";
-import { mockSpendingPolicy, mockDailySpend } from "@/lib/mockData";
+import { AGENT_SMART_ACCOUNT_ABI } from "@/lib/contracts";
 
 export function useWalletPolicy(agentAccountAddress?: string) {
+  const publicClient = usePublicClient();
   const [policy, setPolicy] = useState<SpendingPolicy | null>(null);
   const [dailySpend, setDailySpend] = useState<DailySpend | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -12,7 +15,7 @@ export function useWalletPolicy(agentAccountAddress?: string) {
 
   useEffect(() => {
     const fetchPolicy = async () => {
-      if (!agentAccountAddress) {
+      if (!agentAccountAddress || !publicClient) {
         setPolicy(null);
         setDailySpend(null);
         setIsLoading(false);
@@ -23,32 +26,44 @@ export function useWalletPolicy(agentAccountAddress?: string) {
       setError(null);
 
       try {
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        const [policyData, spendData] = await Promise.all([
+          publicClient.readContract({
+            address: agentAccountAddress as Address,
+            abi: AGENT_SMART_ACCOUNT_ABI,
+            functionName: "getPolicy",
+          }),
+          publicClient.readContract({
+            address: agentAccountAddress as Address,
+            abi: AGENT_SMART_ACCOUNT_ABI,
+            functionName: "getDailySpend",
+          }),
+        ]);
 
-        // TODO: Replace with actual contract reads when deployed
-        // const policyData = await readContract({
-        //   address: agentAccountAddress as Address,
-        //   abi: AGENT_SMART_ACCOUNT_ABI,
-        //   functionName: 'getPolicy',
-        // });
-        // const dailySpendData = await readContract({
-        //   address: agentAccountAddress as Address,
-        //   abi: AGENT_SMART_ACCOUNT_ABI,
-        //   functionName: 'getDailySpend',
-        // });
-
-        setPolicy(mockSpendingPolicy);
-        setDailySpend(mockDailySpend);
+        setPolicy({
+          dailyLimit: policyData.dailyLimit,
+          expiresAt: policyData.expiresAt,
+          requiresApprovalAbove: policyData.requiresApprovalAbove,
+          // Can't enumerate allowed targets/tokens from current ABI
+          // (only getAllowedTarget(address) exists, which checks a single address)
+          // TODO: Add enumeration support in contract
+          allowedTargets: [],
+          allowedTokens: [],
+        });
+        setDailySpend({
+          amount: spendData[0],
+          lastReset: spendData[1],
+        });
       } catch (err) {
-        setError(err instanceof Error ? err : new Error("Failed to fetch policy"));
+        setError(
+          err instanceof Error ? err : new Error("Failed to fetch policy")
+        );
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchPolicy();
-  }, [agentAccountAddress]);
+  }, [agentAccountAddress, publicClient]);
 
   return {
     policy,

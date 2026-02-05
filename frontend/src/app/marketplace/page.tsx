@@ -107,7 +107,13 @@ export default function MarketplacePage() {
         {!isLoading && filteredServices.length > 0 && (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredServices.map((service) => (
-              <ServiceCard key={service.id} service={service} />
+              <ServiceCard
+                key={service.id}
+                service={service}
+                onClick={() => {
+                  window.location.href = `/playground?service=${encodeURIComponent(service.id)}`;
+                }}
+              />
             ))}
           </div>
         )}

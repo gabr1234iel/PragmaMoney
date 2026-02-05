@@ -4,7 +4,7 @@
   "description": "PragmaMoney x402 payment proxy server with dual payment verification",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon --exec tsx src/server.ts",
+    "dev": "nodemon --exec 'npx tsx' src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "test:x402": "tsx scripts/test-x402.ts"

@@ -1,21 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useServiceRegistry } from "@/hooks/useServiceRegistry";
 import { useX402Payment } from "@/hooks/useX402Payment";
 import { ServiceTester } from "@/components/ServiceTester";
 import { PaymentConfirm } from "@/components/PaymentConfirm";
-import { Service, PaymentInfo } from "@/types";
+import { Service, PaymentInfo, SERVICE_TYPE_LABELS } from "@/types";
 import { formatUSDC } from "@/lib/utils";
 import { ChevronDown, Info, AlertCircle } from "lucide-react";
 import { useAccount } from "wagmi";
 
-export default function PlaygroundPage() {
+function getProxyResourceId(service: Service): string {
+  // Use the bytes32 hex ID — matches the on-chain serviceId
+  // and what the register page uses as the proxy resource ID.
+  return service.id;
+}
+
+function getServiceLabel(service: Service): string {
+  if (service.name) return service.name;
+  const typeLabel = SERVICE_TYPE_LABELS[service.serviceType] ?? "Service";
+  const shortId = service.id.slice(0, 10) + "...";
+  return `${typeLabel} ${shortId}`;
+}
+
+function PlaygroundContent() {
   const { address, isConnected } = useAccount();
+  const searchParams = useSearchParams();
   const { services, isLoading: servicesLoading } = useServiceRegistry();
-  const { makePayment, isLoading: paymentLoading, error: paymentError } = useX402Payment();
+  const { makePayment, isLoading: paymentLoading, error: paymentError, proxyUrl } = useX402Payment();
 
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+
+  // Auto-select service from query param (e.g. /playground?service=0x...)
+  useEffect(() => {
+    const serviceId = searchParams.get("service");
+    if (serviceId && services.length > 0 && !selectedService) {
+      const match = services.find((s) => s.id === serviceId);
+      if (match) setSelectedService(match);
+    }
+  }, [searchParams, services, selectedService]);
+
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<{
     method: string;
@@ -55,10 +80,9 @@ export default function PlaygroundPage() {
       setResponse(null);
       setRequestError(null);
 
-      // Simulate API call with payment
-      // In production, this would use the x402-axios client
+      const resourceId = getProxyResourceId(selectedService);
       const result = await makePayment(
-        selectedService.endpoint,
+        resourceId,
         pendingRequest.method as "GET" | "POST",
         pendingRequest.body ? JSON.parse(pendingRequest.body) : undefined,
         { headers: pendingRequest.headers }
@@ -142,7 +166,7 @@ export default function PlaygroundPage() {
                     <option value="">Select a service...</option>
                     {services.map((service) => (
                       <option key={service.id} value={service.id}>
-                        {service.name || service.endpoint}
+                        {getServiceLabel(service)}
                       </option>
                     ))}
                   </select>
@@ -179,6 +203,13 @@ export default function PlaygroundPage() {
                     <p className="text-xs text-lobster-text mb-1">Endpoint</p>
                     <p className="text-sm font-mono text-lobster-dark break-all">
                       {selectedService.endpoint}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-lobster-text mb-1">Proxy URL</p>
+                    <p className="text-sm font-mono text-lobster-dark break-all">
+                      {proxyUrl}/proxy/{getProxyResourceId(selectedService)}
                     </p>
                   </div>
 
@@ -245,5 +276,13 @@ export default function PlaygroundPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function PlaygroundPage() {
+  return (
+    <Suspense>
+      <PlaygroundContent />
+    </Suspense>
   );
 }

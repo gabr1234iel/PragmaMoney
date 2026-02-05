@@ -15,6 +15,8 @@ export interface PaymentRequirementsAccept {
   network: string;
   maxAmountRequired: string;
   resource: string;
+  description: string;
+  mimeType: string;
   payTo: string;
   maxTimeoutSeconds: number;
   asset: string;
@@ -88,6 +90,8 @@ export interface Resource {
   originalUrl: string;
   proxyUrl: string;
   pricing: ResourcePricing;
+  apiKey?: string;
+  apiKeyHeader?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -105,6 +109,7 @@ export interface Transaction {
   method: PaymentMethod;
   timestamp: number;
   status: TransactionStatus;
+  paymentId?: string;
 }
 
 // ---------------------------------------------------------------------------
