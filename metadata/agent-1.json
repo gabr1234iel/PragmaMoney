@@ -1,0 +1,11 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "Agent One",
+  "services": [
+    {
+      "type": "http",
+      "serviceEndpoint": "https://api.example.com/agent-1"
+    }
+  ],
+  "x402Support": true
+}
