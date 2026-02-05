@@ -6,10 +6,12 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Auth, Authority} from "../components/Authorities/Auth.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Errors} from "../errors/Errors.sol";
+import {IIdentityRegistry} from "../interfaces/IIdentityRegistry.sol";
 
 /**
  * @title AgentPool
@@ -34,7 +36,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
  * - spentToday resets when the day index changes.
  * - pull() transfers assets to an allowed target, not necessarily the agent itself.
  */
-contract AgentPool is ERC4626, Auth, ReentrancyGuard, Pausable {
+contract AgentPool is ERC4626, Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     struct VestingInfo {
@@ -43,14 +45,18 @@ contract AgentPool is ERC4626, Auth, ReentrancyGuard, Pausable {
     }
 
     event AgentPulled(uint64 indexed dayIndex, address indexed to, uint256 assets, uint256 spentToday, uint256 cap);
-    event AgentAccountUpdated(address indexed oldAgent, address indexed newAgent);
     event DailyCapUpdated(uint256 oldCap, uint256 newCap);
     event AgentRevoked(bool revoked);
     event VestingParamsUpdated(uint64 vestingDuration);
     event AllowedPullTargetUpdated(address indexed target, bool allowed);
+    event AgentMetadataUpdated(string metadataURI);
 
-    address public agentAccount;
+    IIdentityRegistry public immutable identityRegistry;
+    uint256 public immutable agentId;
+    address public scoreOracle;
+    address public admin;
     bool public agentRevoked;
+    string public metadataURI;
 
     uint256 public dailyCap;
     uint64 public currentDay;
@@ -67,23 +73,28 @@ contract AgentPool is ERC4626, Auth, ReentrancyGuard, Pausable {
         string memory name_,
         string memory symbol_,
         address owner_,
-        Authority authority_,
-        address agentAccount_,
+        address admin_,
+        IIdentityRegistry identityRegistry_,
+        uint256 agentId_,
+        address scoreOracle_,
         uint256 dailyCap_,
-        uint64 vestingDuration_
-    ) ERC4626(asset_) ERC20(name_, symbol_) {
-        require(address(asset_) != address(0), "bad asset");
-        require(owner_ != address(0), "bad owner");
-        require(agentAccount_ != address(0), "bad agent");
+        uint64 vestingDuration_,
+        string memory metadataURI_
+    ) ERC4626(asset_) ERC20(name_, symbol_) Ownable(owner_) {
+        if (address(asset_) == address(0)) revert Errors.BadAsset();
+        if (owner_ == address(0)) revert Errors.BadOwner();
+        if (admin_ == address(0)) revert Errors.BadOwner();
+        if (address(identityRegistry_) == address(0)) revert Errors.BadIdentity();
+        if (scoreOracle_ == address(0)) revert Errors.BadTarget();
 
-        owner = owner_;
-        authority = authority_;
-        emit OwnershipTransferred(msg.sender, owner_);
-        emit AuthorityUpdated(msg.sender, authority_);
-
-        agentAccount = agentAccount_;
+        identityRegistry = identityRegistry_;
+        agentId = agentId_;
+        scoreOracle = scoreOracle_;
+        admin = admin_;
         dailyCap = dailyCap_;
         vestingDuration = vestingDuration_;
+        metadataURI = metadataURI_;
+        emit AgentMetadataUpdated(metadataURI_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -148,67 +159,80 @@ contract AgentPool is ERC4626, Auth, ReentrancyGuard, Pausable {
                                ADMIN
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Update the agent account.
-    function setAgentAccount(address newAgent) external requiresAuth {
-        require(newAgent != address(0), "bad agent");
-        address old = agentAccount;
-        agentAccount = newAgent;
-        emit AgentAccountUpdated(old, newAgent);
+    modifier onlyOwnerOrAdmin() {
+        if (msg.sender != owner() && msg.sender != admin) revert Errors.NotAuthorized();
+        _;
+    }
+
+    modifier onlyOwnerOrAdminOrOracle() {
+        if (msg.sender != owner() && msg.sender != admin && msg.sender != scoreOracle) revert Errors.NotAuthorized();
+        _;
+    }
+
+    function setAdmin(address newAdmin) external onlyOwner {
+        if (newAdmin == address(0)) revert Errors.BadOwner();
+        admin = newAdmin;
+    }
+
+    /// @notice Update the score oracle allowed to set caps.
+    function setScoreOracle(address newOracle) external onlyOwnerOrAdmin {
+        if (newOracle == address(0)) revert Errors.BadTarget();
+        scoreOracle = newOracle;
     }
 
     /// @notice Update the daily pull cap.
-    function setDailyCap(uint256 newCap) external requiresAuth {
+    function setDailyCap(uint256 newCap) external onlyOwnerOrAdminOrOracle {
         uint256 old = dailyCap;
         dailyCap = newCap;
         emit DailyCapUpdated(old, newCap);
     }
 
     /// @notice Enable/disable a pull target.
-    function setAllowedPullTarget(address target, bool allowed) external requiresAuth {
-        require(target != address(0), "bad target");
+    function setAllowedPullTarget(address target, bool allowed) external onlyOwnerOrAdmin {
+        if (target == address(0)) revert Errors.BadTarget();
         allowedPullTarget[target] = allowed;
         emit AllowedPullTargetUpdated(target, allowed);
     }
 
     /// @notice Enable or disable allowlist enforcement.
-    function setAllowlistEnabled(bool enabled) external requiresAuth {
+    function setAllowlistEnabled(bool enabled) external onlyOwnerOrAdmin {
         allowlistEnabled = enabled;
     }
 
     /// @notice Revoke agent pull privileges.
-    function revokeAgent() external requiresAuth {
+    function revokeAgent() external onlyOwnerOrAdmin {
         agentRevoked = true;
         emit AgentRevoked(true);
     }
 
     /// @notice Restore agent pull privileges.
-    function unrevokeAgent() external requiresAuth {
+    function unrevokeAgent() external onlyOwnerOrAdmin {
         agentRevoked = false;
         emit AgentRevoked(false);
     }
 
     /// @notice Update vesting parameters.
-    function setVestingParams(uint64 vestingDuration_) external requiresAuth {
+    function setVestingParams(uint64 vestingDuration_) external onlyOwnerOrAdmin {
         vestingDuration = vestingDuration_;
         emit VestingParamsUpdated(vestingDuration_);
     }
 
     /// @notice Pause deposits, mints, and pulls. Withdrawals/redeems remain available.
-    function pause() external requiresAuth {
+    function pause() external onlyOwnerOrAdmin {
         _pause();
     }
 
     /// @notice Unpause deposits, mints, and pulls.
-    function unpause() external requiresAuth {
+    function unpause() external onlyOwnerOrAdmin {
         _unpause();
     }
 
     /// @notice Rescue non-asset tokens sent to the vault.
     /// @dev Underlying asset rescue is only allowed when paused, to avoid rug-like behavior.
-    function rescueTokens(address token, address to, uint256 amount) external requiresAuth {
-        require(to != address(0), "bad to");
+    function rescueTokens(address token, address to, uint256 amount) external onlyOwnerOrAdmin {
+        if (to == address(0)) revert Errors.BadTo();
         if (token == address(asset())) {
-            require(paused(), "asset rescue requires pause");
+            if (!paused()) revert Errors.AssetRescueRequiresPause();
         }
         IERC20(token).safeTransfer(to, amount);
     }
@@ -218,16 +242,22 @@ contract AgentPool is ERC4626, Auth, ReentrancyGuard, Pausable {
     //////////////////////////////////////////////////////////////*/
 
     modifier whenAgentActive() {
-        require(!agentRevoked, "agent revoked");
+        if (agentRevoked) revert Errors.AgentRevokedError();
         _;
     }
 
     /// @notice Pull assets from the vault, constrained by daily cap and allowlist.
-    function pull(address to, uint256 assets) external nonReentrant whenNotPaused whenAgentActive {
-        require(msg.sender == agentAccount, "not agent");
-        require(to != address(0), "bad to");
+    function pull(address to, uint256 assets) external nonReentrant whenAgentActive {
+        address wallet = identityRegistry.getAgentWallet(agentId);
+        if (wallet == address(0)) {
+            if (!paused()) _pause();
+            revert Errors.BadWallet();
+        }
+        _requireNotPaused();
+        if (msg.sender != wallet) revert Errors.NotAgent();
+        if (to == address(0)) revert Errors.BadTo();
         if (allowlistEnabled) {
-            require(allowedPullTarget[to], "target not allowed");
+            if (!allowedPullTarget[to]) revert Errors.TargetNotAllowed();
         }
 
         uint64 dayIndex = getDayIndex(block.timestamp);
@@ -236,7 +266,7 @@ contract AgentPool is ERC4626, Auth, ReentrancyGuard, Pausable {
             spentToday = 0;
         }
 
-        require(spentToday + assets <= dailyCap, "cap exceeded");
+        if (spentToday + assets > dailyCap) revert Errors.CapExceeded();
         spentToday += assets;
 
         IERC20(asset()).safeTransfer(to, assets);
@@ -268,7 +298,7 @@ contract AgentPool is ERC4626, Auth, ReentrancyGuard, Pausable {
         nonReentrant
         returns (uint256 shares)
     {
-        require(receiver != address(0), "bad receiver");
+        if (receiver == address(0)) revert Errors.BadReceiver();
         _beforeWithdraw(owner, assets);
         shares = _convertToShares(assets, Math.Rounding.Ceil);
         _withdraw(msg.sender, receiver, owner, assets, shares);
@@ -282,7 +312,7 @@ contract AgentPool is ERC4626, Auth, ReentrancyGuard, Pausable {
         nonReentrant
         returns (uint256 assets)
     {
-        require(receiver != address(0), "bad receiver");
+        if (receiver == address(0)) revert Errors.BadReceiver();
         _beforeRedeem(owner, shares);
         assets = previewRedeem(shares);
         _withdraw(msg.sender, receiver, owner, assets, shares);
@@ -319,14 +349,14 @@ contract AgentPool is ERC4626, Auth, ReentrancyGuard, Pausable {
 
     function _beforeWithdraw(address owner, uint256 assets) internal view {
         if (!isUserLocked(owner)) return;
-        revert("locked");
         if (assets == 0) revert("zero assets");
+        revert("locked");
     }
 
     function _beforeRedeem(address owner, uint256 shares) internal view {
         if (!isUserLocked(owner)) return;
-        revert("locked");
         if (shares == 0) revert("zero shares");
+        revert("locked");
     }
 
     function _afterWithdraw(address owner, uint256 sharesBurned) internal {

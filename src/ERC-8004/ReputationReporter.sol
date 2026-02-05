@@ -1,26 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {Auth, Authority} from "../components/Authorities/Auth.sol";
-
-interface IReputationRegistry {
-    function giveFeedback(
-        uint256 agentId,
-        int128 value,
-        uint8 valueDecimals,
-        string calldata tag1,
-        string calldata tag2,
-        string calldata endpoint,
-        string calldata feedbackURI,
-        bytes32 feedbackHash
-    ) external;
-}
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Errors} from "../errors/Errors.sol";
+import {IReputationRegistry} from "../interfaces/IReputationRegistry.sol";
+import {IIdentityRegistry} from "../interfaces/IIdentityRegistry.sol";
 
 /// @title ReputationReporter
 /// @notice Auth-gated proxy for submitting feedback to the ReputationRegistry.
-contract ReputationReporter is Auth {
+contract ReputationReporter is OwnableUpgradeable {
     event ReputationRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
-    event ValidatorUpdated(address indexed validator, bool enabled);
+    event ReporterUpdated(address indexed reporter, bool enabled);
     event FeedbackForwarded(
         address indexed validator,
         uint256 indexed agentId,
@@ -34,30 +24,49 @@ contract ReputationReporter is Auth {
     );
 
     address public reputationRegistry;
-    mapping(address => bool) public isValidator;
+    IIdentityRegistry public identityRegistry;
+    mapping(address => bool) public isReporter;
+    address public admin;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address owner, Authority authority, address reputationRegistry_) external initializer {
-        __Auth_init(owner, authority);
+    function initialize(address owner, address admin_, address reputationRegistry_, address identityRegistry_) external initializer {
+        __Ownable_init(owner);
+        if (admin_ == address(0)) revert Errors.BadOwner();
+        admin = admin_;
         _setReputationRegistry(reputationRegistry_);
+        _setIdentityRegistry(identityRegistry_);
     }
 
-    function setReputationRegistry(address newRegistry) external requiresAuth {
+    modifier onlyOwnerOrAdmin() {
+        if (msg.sender != owner() && msg.sender != admin) revert Errors.NotAuthorized();
+        _;
+    }
+
+    function setAdmin(address newAdmin) external onlyOwner {
+        if (newAdmin == address(0)) revert Errors.BadOwner();
+        admin = newAdmin;
+    }
+
+    function setReputationRegistry(address newRegistry) external onlyOwnerOrAdmin {
         _setReputationRegistry(newRegistry);
     }
 
-    function setValidator(address validator, bool enabled) external requiresAuth {
-        require(validator != address(0), "bad validator");
-        isValidator[validator] = enabled;
-        emit ValidatorUpdated(validator, enabled);
+    function setIdentityRegistry(address newRegistry) external onlyOwnerOrAdmin {
+        _setIdentityRegistry(newRegistry);
     }
 
-    modifier onlyValidator() {
-        require(isValidator[msg.sender], "not validator");
+    function setReporter(address reporter, bool enabled) external onlyOwnerOrAdmin {
+        if (reporter == address(0)) revert Errors.BadValidator();
+        isReporter[reporter] = enabled;
+        emit ReporterUpdated(reporter, enabled);
+    }
+
+    modifier onlyReporter() {
+        if (!isReporter[msg.sender]) revert Errors.NotValidator();
         _;
     }
 
@@ -70,7 +79,10 @@ contract ReputationReporter is Auth {
         string calldata endpoint,
         string calldata feedbackURI,
         bytes32 feedbackHash
-    ) external onlyValidator {
+    ) external onlyReporter {
+        address wallet = identityRegistry.getAgentWallet(agentId);
+        address owner = identityRegistry.ownerOf(agentId);
+        if (msg.sender == wallet || msg.sender == owner) revert Errors.SelfFeedbackNotAllowed();
         IReputationRegistry(reputationRegistry).giveFeedback(
             agentId,
             value,
@@ -95,9 +107,14 @@ contract ReputationReporter is Auth {
     }
 
     function _setReputationRegistry(address newRegistry) internal {
-        require(newRegistry != address(0), "bad registry");
+        if (newRegistry == address(0)) revert Errors.BadRegistry();
         address old = reputationRegistry;
         reputationRegistry = newRegistry;
         emit ReputationRegistryUpdated(old, newRegistry);
+    }
+
+    function _setIdentityRegistry(address newRegistry) internal {
+        if (newRegistry == address(0)) revert Errors.BadIdentity();
+        identityRegistry = IIdentityRegistry(newRegistry);
     }
 }
