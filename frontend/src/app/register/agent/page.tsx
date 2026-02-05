@@ -10,7 +10,7 @@ import {
   AGENT_ACCOUNT_FACTORY_ABI,
   AGENT_POOL_FACTORY_ADDRESS,
   AGENT_POOL_FACTORY_ABI,
-  MOCK_USDC_ADDRESS
+  USDC_ADDRESS
 } from "@/lib/contracts";
 import { parseUSDC, formatAddress } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -334,7 +334,7 @@ export default function RegisterAgentPage() {
           smartWalletAddress,
           {
             agentURI: agentURIJson,
-            asset: MOCK_USDC_ADDRESS,
+            asset: USDC_ADDRESS,
             name: poolConfig.poolName,
             symbol: poolConfig.poolSymbol,
             poolOwner: address,

@@ -5,7 +5,7 @@ import { useAccount, useWriteContract, usePublicClient } from "wagmi";
 import { type Address, formatUnits } from "viem";
 import { useAgentPool } from "@/hooks/useAgentPool";
 import { EarningsChart } from "@/components/EarningsChart";
-import { AGENT_POOL_ABI, ERC20_ABI, MOCK_USDC_ADDRESS } from "@/lib/contracts";
+import { AGENT_POOL_ABI, ERC20_ABI, USDC_ADDRESS } from "@/lib/contracts";
 import { formatUSDC, formatAddress, parseUSDC, cn, getBaseScanUrl } from "@/lib/utils";
 import {
   ArrowLeft, Bot, Shield, DollarSign, TrendingUp, Clock,
@@ -31,7 +31,7 @@ export default function PoolPage({ params }: { params: { address: string } }) {
     try {
       setApproveTx({ status: "pending" });
       const hash = await writeContractAsync({
-        address: MOCK_USDC_ADDRESS,
+        address: USDC_ADDRESS,
         abi: ERC20_ABI,
         functionName: "approve",
         args: [poolAddress, parseUSDC(depositAmount)],
