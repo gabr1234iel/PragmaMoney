@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IServiceRegistry} from "./interfaces/IServiceRegistry.sol";
+import {IIdentityRegistry} from "../interfaces/IIdentityRegistry.sol";
+import {IAgentFactory} from "../interfaces/IAgentFactory.sol";
 
 /// @title ServiceRegistry
 /// @notice On-chain registry for services that can be paid through the x402Gateway
@@ -14,6 +16,9 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
     /// @notice Mapping from serviceId to Service struct
     mapping(bytes32 => Service) private _services;
 
+    /// @notice Mapping from serviceId to agentId
+    mapping(bytes32 => uint256) private _agentIds;
+
     /// @notice Array of all registered service IDs for enumeration
     bytes32[] private _serviceIds;
 
@@ -22,6 +27,12 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
 
     /// @notice Additional addresses authorized to call recordUsage
     mapping(address => bool) public authorizedRecorders;
+
+    /// @notice Identity registry for agent validation
+    IIdentityRegistry public immutable identityRegistry;
+
+    /// @notice Agent factory for pool validation
+    IAgentFactory public immutable agentFactory;
 
     // -- Custom errors --
 
@@ -33,6 +44,9 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
     error ZeroPricePerCall();
     error EmptyName();
     error EmptyEndpoint();
+    error AgentNotRegistered(uint256 agentId);
+    error AgentWalletNotSet(uint256 agentId);
+    error AgentPoolNotFound(uint256 agentId);
 
     // -- Events --
 
@@ -57,7 +71,14 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
     // -- Constructor --
 
     /// @param initialOwner The owner of the registry (can set gateway)
-    constructor(address initialOwner) Ownable(initialOwner) {}
+    /// @param identityRegistry_ Identity registry contract address
+    /// @param agentFactory_ Agent factory contract address
+    constructor(address initialOwner, address identityRegistry_, address agentFactory_)
+        Ownable(initialOwner)
+    {
+        identityRegistry = IIdentityRegistry(identityRegistry_);
+        agentFactory = IAgentFactory(agentFactory_);
+    }
 
     // -- External functions --
 
@@ -80,11 +101,27 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
     /// @inheritdoc IServiceRegistry
     function registerService(
         bytes32 serviceId,
+        uint256 agentId,
         string calldata name,
         uint256 pricePerCall,
         string calldata endpoint,
         ServiceType serviceType
     ) external {
+        // Validate agent existence and pool
+        try identityRegistry.ownerOf(agentId) returns (address) {
+            // ok
+        } catch {
+            revert AgentNotRegistered(agentId);
+        }
+        address agentWallet = identityRegistry.getAgentWallet(agentId);
+        if (agentWallet == address(0)) {
+            revert AgentWalletNotSet(agentId);
+        }
+        address pool = agentFactory.poolByAgentId(agentId);
+        if (pool == address(0)) {
+            revert AgentPoolNotFound(agentId);
+        }
+
         if (_services[serviceId].owner != address(0)) {
             revert ServiceAlreadyRegistered(serviceId);
         }
@@ -99,6 +136,7 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
         }
 
         _services[serviceId] = Service({
+            agentId: agentId,
             owner: msg.sender,
             name: name,
             pricePerCall: pricePerCall,
@@ -109,9 +147,11 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
             totalRevenue: 0
         });
 
+        _agentIds[serviceId] = agentId;
+
         _serviceIds.push(serviceId);
 
-        emit ServiceRegistered(serviceId, msg.sender, name, pricePerCall, serviceType);
+        emit ServiceRegistered(serviceId, agentId, msg.sender, name, pricePerCall, serviceType);
     }
 
     /// @inheritdoc IServiceRegistry
@@ -120,6 +160,14 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
             revert ServiceNotFound(serviceId);
         }
         return _services[serviceId];
+    }
+
+    /// @inheritdoc IServiceRegistry
+    function getAgentId(bytes32 serviceId) external view returns (uint256 agentId) {
+        if (_services[serviceId].owner == address(0)) {
+            revert ServiceNotFound(serviceId);
+        }
+        return _agentIds[serviceId];
     }
 
     /// @inheritdoc IServiceRegistry

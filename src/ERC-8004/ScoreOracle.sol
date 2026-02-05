@@ -92,8 +92,8 @@ contract ScoreOracle is Ownable {
             return;
         }
 
-        address[] memory pools = agentFactory.getPoolsByAgentId(agentId);
-        if (pools.length == 0) revert Errors.NoPools();
+        address pool = agentFactory.poolByAgentId(agentId);
+        if (pool == address(0)) revert Errors.NoPools();
 
         // Aggregate relative delta (1e18)
         int256 overallDelta = acc.deltaSum / int256(acc.deltaWeightSum);
@@ -102,14 +102,17 @@ contract ScoreOracle is Ownable {
             return;
         }
 
-        for (uint256 i; i < pools.length; i++) {
-            uint256 oldCap = IAgentPool(pools[i]).dailyCap();
+        {
+            uint256 oldCap = IAgentPool(pool).dailyCap();
             uint256 newCap = oldCap;
             uint256 absDelta = uint256(overallDelta > 0 ? overallDelta : -overallDelta);
             // Scale change proportionally to relative delta, capped at 5% (500 bps).
             uint256 bps = (absDelta * 10_000) / 1e18;
             if (bps > 500) bps = 500;
-            if (bps == 0) continue;
+            if (bps == 0) {
+                emit ScoreUpdated(agentId, score, prev);
+                return;
+            }
 
             if (overallDelta > 0) {
                 newCap = oldCap + (oldCap * bps) / 10_000;
@@ -118,8 +121,8 @@ contract ScoreOracle is Ownable {
             }
 
             if (newCap != oldCap) {
-                IAgentPool(pools[i]).setDailyCap(newCap);
-                emit PoolCapUpdated(pools[i], oldCap, newCap);
+                IAgentPool(pool).setDailyCap(newCap);
+                emit PoolCapUpdated(pool, oldCap, newCap);
             }
         }
 
