@@ -7,6 +7,10 @@ import {ServiceRegistry} from "../src/x402/ServiceRegistry.sol";
 import {x402Gateway} from "../src/x402/x402Gateway.sol";
 import {AgentSmartAccount} from "../src/Wallet/AgentSmartAccount.sol";
 import {AgentAccountFactory} from "../src/Wallet/AgentAccountFactory.sol";
+import {AgentFactory} from "../src/Launchpad/AgentFactory.sol";
+import {ReputationReporter} from "../src/ERC-8004/ReputationReporter.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IIdentityRegistry} from "../src/interfaces/IIdentityRegistry.sol";
 
 /// @title Deploy
 /// @notice Deployment script for PragmaMoney contracts on Base Sepolia
@@ -79,3 +83,80 @@ contract Deploy is Script {
 }
 
 // forge script script/Deploy.s.sol:Deploy --rpc-url base_sepolia --broadcast --verify -vvvv
+
+/// @title RedeployRegistryGateway
+/// @notice Redeploys ServiceRegistry + x402Gateway with authorized recorder for proxy signer
+contract RedeployRegistryGateway is Script {
+    address constant MOCK_USDC = 0x00373f3dc69337e9f141d08a68026A63b88F3051;
+
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        address deployer = vm.addr(deployerPrivateKey);
+        address proxySigner = vm.envAddress("PROXY_SIGNER_ADDRESS");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // 1. Deploy new ServiceRegistry
+        ServiceRegistry registry = new ServiceRegistry(deployer);
+
+        // 2. Deploy new x402Gateway pointing to new registry
+        x402Gateway gateway = new x402Gateway(address(registry), MOCK_USDC);
+
+        // 3. Authorize gateway on registry
+        registry.setGateway(address(gateway));
+
+        // 4. Authorize proxy signer as recorder
+        registry.setRecorder(proxySigner, true);
+
+        vm.stopBroadcast();
+
+        console2.log("New ServiceRegistry:", address(registry));
+        console2.log("New x402Gateway:", address(gateway));
+        console2.log("Proxy signer authorized:", proxySigner);
+        console2.log("MockUSDC (unchanged):", MOCK_USDC);
+    }
+}
+
+// forge script script/Deploy.s.sol:RedeployRegistryGateway --rpc-url base_sepolia --broadcast --verify -vvvv
+
+/// @title DeployAgentFactory
+/// @notice Deploys ReputationReporter (behind ERC1967Proxy) and AgentFactory on Base Sepolia
+contract DeployAgentFactory is Script {
+    address constant IDENTITY_REGISTRY = 0x8004A818BFB912233c491871b3d84c89A494BD9e;
+    address constant REPUTATION_REGISTRY = 0x8004B663056A597Dffe9eCcC1965A193B7388713;
+
+    function run() external {
+        vm.startBroadcast(vm.envUint("DEPLOYER_PRIVATE_KEY"));
+        address deployer = vm.addr(vm.envUint("DEPLOYER_PRIVATE_KEY"));
+
+        // 1. Deploy ReputationReporter implementation
+        ReputationReporter reporterImpl = new ReputationReporter();
+
+        // 2. Deploy ERC1967Proxy pointing to implementation with initializer
+        bytes memory initData = abi.encodeCall(
+            ReputationReporter.initialize,
+            (deployer, deployer, REPUTATION_REGISTRY, IDENTITY_REGISTRY)
+        );
+        ERC1967Proxy reporterProxy = new ERC1967Proxy(address(reporterImpl), initData);
+
+        // 3. Deploy AgentFactory
+        AgentFactory factory = new AgentFactory(
+            IIdentityRegistry(IDENTITY_REGISTRY),
+            deployer,   // owner
+            deployer,   // admin
+            deployer,   // scoreOracle placeholder
+            address(reporterProxy) // reputationReporter
+        );
+
+        // 4. Set AgentFactory as admin on ReputationReporter
+        ReputationReporter(address(reporterProxy)).setAdmin(address(factory));
+
+        vm.stopBroadcast();
+
+        console2.log("ReputationReporter (impl):", address(reporterImpl));
+        console2.log("ReputationReporter (proxy):", address(reporterProxy));
+        console2.log("AgentFactory:", address(factory));
+    }
+}
+
+// forge script script/Deploy.s.sol:DeployAgentFactory --rpc-url base_sepolia --broadcast --verify -vvvv

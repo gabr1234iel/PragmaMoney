@@ -69,6 +69,7 @@ export interface Agent {
   walletAddress: string;
   agentURI: string;
   name: string;
+  poolAddress?: string;
 }
 
 export const SERVICE_TYPE_COLORS: Record<ServiceType, string> = {

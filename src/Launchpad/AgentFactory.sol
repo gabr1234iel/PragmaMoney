@@ -22,6 +22,7 @@ contract AgentFactory is Ownable, IERC721Receiver {
 
     mapping(uint256 => address) public poolByAgentId;
     mapping(uint256 => address[]) private _poolsByAgentId;
+    uint256[] private _allAgentIds;
 
     struct CreateParams {
         string agentURI;
@@ -60,6 +61,13 @@ contract AgentFactory is Ownable, IERC721Receiver {
         _;
     }
 
+    modifier onlyOwnerOrAdminOrAgentOwner(uint256 agentId) {
+        if (msg.sender != owner() && msg.sender != admin
+            && !identityRegistry.isAuthorizedOrOwner(msg.sender, agentId))
+            revert Errors.NotAuthorized();
+        _;
+    }
+
     function setAdmin(address newAdmin) external onlyOwner {
         if (newAdmin == address(0)) revert Errors.BadOwner();
         admin = newAdmin;
@@ -82,7 +90,7 @@ contract AgentFactory is Ownable, IERC721Receiver {
     /// @dev Authorized caller deploys on behalf of agentAccount.
     function createAgentPool(uint256 agentId, address agentAccount, CreateParams calldata p)
         external
-        onlyOwnerOrAdmin
+        onlyOwnerOrAdminOrAgentOwner(agentId)
         returns (address pool)
     {
         if (agentAccount == address(0)) revert Errors.BadAgent();
@@ -110,6 +118,7 @@ contract AgentFactory is Ownable, IERC721Receiver {
         ));
 
         poolByAgentId[agentId] = pool;
+        _allAgentIds.push(agentId);
         _poolsByAgentId[agentId].push(pool);
         IReputationReporter(reputationReporter).setReporter(agentAccount, true);
         emit AgentPoolCreated(agentAccount, agentId, pool);
@@ -118,6 +127,15 @@ contract AgentFactory is Ownable, IERC721Receiver {
     /// @notice Returns all pools created for a given agent id.
     function getPoolsByAgentId(uint256 agentId) external view returns (address[] memory) {
         return _poolsByAgentId[agentId];
+    }
+
+    function agentCount() external view returns (uint256) {
+        return _allAgentIds.length;
+    }
+
+    function getAgentIdAt(uint256 index) external view returns (uint256) {
+        if (index >= _allAgentIds.length) revert Errors.IndexOutOfBounds();
+        return _allAgentIds[index];
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) external pure override returns (bytes4) {

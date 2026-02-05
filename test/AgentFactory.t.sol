@@ -171,4 +171,101 @@ contract AgentFactoryTest is BaseTest {
         assertEq(pools.length, 1);
         assertEq(pools[0], pool1);
     }
+
+    /// @notice agentCount returns the correct number of agents with pools
+    function test_agentCount_returnsCorrectCount() public {
+        AgentFactory.CreateParams memory p1 = AgentFactory.CreateParams({
+            agentURI: "file://metadata/agent-1.json",
+            asset: IERC20(address(usdc)),
+            name: "Agent Pool 1",
+            symbol: "AP1",
+            poolOwner: deployer,
+            dailyCap: 100e6,
+            vestingDuration: 7 days,
+            metadataURI: "file://metadata/agent-1.json"
+        });
+
+        AgentFactory.CreateParams memory p2 = AgentFactory.CreateParams({
+            agentURI: "file://metadata/agent-2.json",
+            asset: IERC20(address(usdc)),
+            name: "Agent Pool 2",
+            symbol: "AP2",
+            poolOwner: deployer,
+            dailyCap: 50e6,
+            vestingDuration: 1 days,
+            metadataURI: "file://metadata/agent-2.json"
+        });
+
+        vm.prank(agentOwner);
+        uint256 agentId1 = id.register("file://metadata/agent-1.json");
+        vm.prank(bob);
+        uint256 agentId2 = id.register("file://metadata/agent-2.json");
+
+        assertEq(factory.agentCount(), 0);
+
+        vm.prank(deployer);
+        factory.createAgentPool(agentId1, agentOwner, p1);
+        assertEq(factory.agentCount(), 1);
+
+        vm.prank(deployer);
+        factory.createAgentPool(agentId2, bob, p2);
+        assertEq(factory.agentCount(), 2);
+    }
+
+    /// @notice getAgentIdAt returns the correct agentId for a given index
+    function test_getAgentIdAt_returnsCorrectId() public {
+        AgentFactory.CreateParams memory p = AgentFactory.CreateParams({
+            agentURI: "file://metadata/agent-1.json",
+            asset: IERC20(address(usdc)),
+            name: "Agent Pool",
+            symbol: "APOOL",
+            poolOwner: deployer,
+            dailyCap: 100e6,
+            vestingDuration: 7 days,
+            metadataURI: "file://metadata/agent-1.json"
+        });
+
+        vm.prank(agentOwner);
+        uint256 agentId = id.register("file://metadata/agent-1.json");
+
+        vm.prank(deployer);
+        factory.createAgentPool(agentId, agentOwner, p);
+
+        assertEq(factory.getAgentIdAt(0), agentId);
+    }
+
+    /// @notice Agent owner (identity NFT holder) can create their own pool
+    function test_agentOwner_canCreatePool() public {
+        AgentFactory.CreateParams memory p = AgentFactory.CreateParams({
+            agentURI: "file://metadata/agent-1.json",
+            asset: IERC20(address(usdc)),
+            name: "Alice Agent Pool",
+            symbol: "AALICE",
+            poolOwner: alice,
+            dailyCap: 100e6,
+            vestingDuration: 7 days,
+            metadataURI: "file://metadata/agent-1.json"
+        });
+
+        // alice registers identity — default wallet is alice
+        vm.prank(alice);
+        uint256 agentId = id.register("file://metadata/agent-1.json");
+        assertEq(id.ownerOf(agentId), alice);
+        assertEq(id.getAgentWallet(agentId), alice);
+
+        // alice (not deployer/admin) calls createAgentPool directly
+        vm.prank(alice);
+        address poolAddr = factory.createAgentPool(agentId, alice, p);
+
+        assertTrue(poolAddr != address(0));
+        assertEq(factory.poolByAgentId(agentId), poolAddr);
+        assertEq(factory.agentCount(), 1);
+        assertEq(factory.getAgentIdAt(0), agentId);
+    }
+
+    /// @notice getAgentIdAt reverts when index is out of bounds
+    function test_getAgentIdAt_revertsOutOfBounds() public {
+        vm.expectRevert(Errors.IndexOutOfBounds.selector);
+        factory.getAgentIdAt(0);
+    }
 }

@@ -5,9 +5,68 @@ import { Address } from "viem";
 export const USDC_ADDRESS: Address = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 // MockUSDC — used by deployed gateway/registry contracts for testing
 export const MOCK_USDC_ADDRESS: Address = "0x00373f3dc69337e9f141d08a68026A63b88F3051";
-export const GATEWAY_ADDRESS: Address = "0x0122fEEc4150A67E6df8bC96dbe32a9B056a3E10";
-export const SERVICE_REGISTRY_ADDRESS: Address = "0xC6E2C02c7D39c8C42d8B1f6AC45806c2C6b387D0";
+export const GATEWAY_ADDRESS: Address = "0xDB80b0ea3D7183667Fb83Ee3f22498d0BB33Bb38";
+export const SERVICE_REGISTRY_ADDRESS: Address = "0x5Ba93c70c5E874B1ff4cb2B1d0Dd30B63F859049";
 export const AGENT_FACTORY_ADDRESS: Address = "0x8B4294B349530d03Fe94C216fc771206637AFDa9";
+
+// AgentFactory (Launchpad pool factory) — deployed by DeployAgentFactory script
+export const AGENT_POOL_FACTORY_ADDRESS: Address = "0xcB016c9DC6c9bE4D6AaE84405B2686569F9cEc05";
+
+export const AGENT_POOL_FACTORY_ABI = [
+  {
+    type: "function",
+    name: "agentCount",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getAgentIdAt",
+    inputs: [{ name: "index", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "poolByAgentId",
+    inputs: [{ name: "agentId", type: "uint256" }],
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "createAgentPool",
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "agentAccount", type: "address" },
+      {
+        name: "p",
+        type: "tuple",
+        components: [
+          { name: "agentURI", type: "string" },
+          { name: "asset", type: "address" },
+          { name: "name", type: "string" },
+          { name: "symbol", type: "string" },
+          { name: "poolOwner", type: "address" },
+          { name: "dailyCap", type: "uint256" },
+          { name: "vestingDuration", type: "uint64" },
+          { name: "metadataURI", type: "string" },
+        ],
+      },
+    ],
+    outputs: [{ name: "pool", type: "address" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getPoolsByAgentId",
+    inputs: [{ name: "agentId", type: "uint256" }],
+    outputs: [{ name: "", type: "address[]" }],
+    stateMutability: "view",
+  },
+] as const;
+
 export const IDENTITY_REGISTRY_ADDRESS: Address = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 export const REPUTATION_REGISTRY_ADDRESS: Address = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 
@@ -183,6 +242,13 @@ export const IDENTITY_REGISTRY_ABI = [
     name: "setAgentWallet",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    name: "tokenURI",
+    outputs: [{ name: "", type: "string" }],
+    stateMutability: "view",
     type: "function",
   },
 ] as const;

@@ -1,0 +1,90 @@
+"use client";
+
+import { Agent } from "@/types";
+import { formatAddress } from "@/lib/utils";
+import { Bot, Wallet, ExternalLink, User, Landmark } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface AgentCardProps {
+  agent: Agent;
+  onClick?: () => void;
+}
+
+export function AgentCard({ agent, onClick }: AgentCardProps) {
+  const hasWallet = agent.walletAddress && agent.walletAddress !== "0x0000000000000000000000000000000000000000";
+
+  let description = "";
+  let x402Support = false;
+  try {
+    if (agent.agentURI) {
+      const parsed = JSON.parse(agent.agentURI);
+      description = parsed.description || "";
+      x402Support = parsed.x402Support || false;
+    }
+  } catch { /* not JSON */ }
+
+  return (
+    <div onClick={onClick} className={cn("card card-hover group", onClick && "cursor-pointer")}>
+      {/* Header */}
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex-1">
+          <div className="flex items-center space-x-2 mb-2">
+            <Bot className="w-5 h-5 text-purple-600" />
+            <h3 className="font-display text-xl font-semibold text-lobster-dark">
+              {agent.name}
+            </h3>
+          </div>
+          <span className="badge border bg-purple-100 text-purple-800 border-purple-200">
+            Agent
+          </span>
+        </div>
+        {x402Support && (
+          <span className="badge border bg-green-100 text-green-800 border-green-200">
+            x402
+          </span>
+        )}
+      </div>
+
+      {/* Description */}
+      {description && (
+        <p className="text-sm text-lobster-text mb-4 line-clamp-2">
+          {description}
+        </p>
+      )}
+
+      {/* Owner & Wallet */}
+      <div className="space-y-2 mb-4 pb-4 border-b border-lobster-border">
+        <div className="flex items-center space-x-2 text-xs text-lobster-text/60">
+          <User className="w-3 h-3" />
+          <span>Owner: {formatAddress(agent.owner)}</span>
+        </div>
+        {hasWallet && (
+          <div className="flex items-center space-x-2 text-xs text-lobster-text/60">
+            <Wallet className="w-3 h-3" />
+            <span>Wallet: {formatAddress(agent.walletAddress)}</span>
+          </div>
+        )}
+        {agent.poolAddress && agent.poolAddress !== "0x0000000000000000000000000000000000000000" && (
+          <div className="flex items-center space-x-2 text-xs text-lobster-text/60">
+            <Landmark className="w-3 h-3" />
+            <span>Pool: {formatAddress(agent.poolAddress)}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="flex justify-between items-center">
+        <div>
+          <p className="text-xs text-lobster-text mb-1">Agent ID</p>
+          <p className="font-display text-lg font-bold text-purple-700">
+            #{agent.agentId.toString()}
+          </p>
+        </div>
+        <button className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-200 group-hover:scale-105">
+          <ExternalLink className="w-4 h-4" />
+          <span className="font-medium">View</span>
+        </button>
+      </div>
+    </div>
+  );
+}

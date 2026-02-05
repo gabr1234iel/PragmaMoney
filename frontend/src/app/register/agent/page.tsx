@@ -7,7 +7,10 @@ import {
   IDENTITY_REGISTRY_ADDRESS,
   IDENTITY_REGISTRY_ABI,
   AGENT_FACTORY_ADDRESS,
-  AGENT_ACCOUNT_FACTORY_ABI
+  AGENT_ACCOUNT_FACTORY_ABI,
+  AGENT_POOL_FACTORY_ADDRESS,
+  AGENT_POOL_FACTORY_ABI,
+  MOCK_USDC_ADDRESS
 } from "@/lib/contracts";
 import { parseUSDC, formatAddress } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -24,7 +27,7 @@ import {
   Loader2
 } from "lucide-react";
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 interface AgentDetails {
   name: string;
@@ -73,6 +76,16 @@ export default function RegisterAgentPage() {
   const [registerTx, setRegisterTx] = useState<TxState>({ status: "idle" });
   const [deployTx, setDeployTx] = useState<TxState>({ status: "idle" });
   const [bindTx, setBindTx] = useState<TxState>({ status: "idle" });
+  const [poolTx, setPoolTx] = useState<TxState>({ status: "idle" });
+
+  // Pool configuration
+  const [poolConfig, setPoolConfig] = useState({
+    poolName: "",
+    poolSymbol: "",
+    dailyCap: "",
+    vestingDays: "",
+    metadataURI: "",
+  });
 
   // Results
   const [agentId, setAgentId] = useState<bigint | null>(null);
@@ -82,6 +95,7 @@ export default function RegisterAgentPage() {
   const { writeContractAsync: writeIdentityRegistry } = useWriteContract();
   const { writeContractAsync: writeFactory } = useWriteContract();
   const { writeContractAsync: writeBindWallet } = useWriteContract();
+  const { writeContractAsync: writePoolFactory } = useWriteContract();
   const { signTypedDataAsync } = useSignTypedData();
 
   // Update operator when wallet connects
@@ -90,6 +104,17 @@ export default function RegisterAgentPage() {
       setWalletPolicy((prev) => ({ ...prev, operator: address }));
     }
   }, [address, walletPolicy.operator]);
+
+  // Auto-populate pool config when agent details change
+  useEffect(() => {
+    if (agentDetails.name) {
+      setPoolConfig(prev => ({
+        ...prev,
+        poolName: prev.poolName || `${agentDetails.name} Pool`,
+        poolSymbol: prev.poolSymbol || `PMP-${agentId || "0"}`,
+      }));
+    }
+  }, [agentDetails.name, agentId]);
 
   // Step 1: Validate agent details
   const validateStep1 = (): boolean => {
@@ -278,11 +303,56 @@ export default function RegisterAgentPage() {
         result: "Wallet bound successfully",
       });
 
-      // Auto-advance to summary
+      // Auto-advance to pool creation
       setTimeout(() => setCurrentStep(4), 1000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Transaction failed";
       setBindTx({ status: "error", error: message });
+    }
+  };
+
+  // Transaction 4: Create Pool
+  const handleCreatePool = async () => {
+    if (!address || !agentId || !smartWalletAddress) return;
+    try {
+      setPoolTx({ status: "pending" });
+
+      // Build agentURI JSON (same as identity registration)
+      const agentURIJson = JSON.stringify({
+        name: agentDetails.name,
+        description: agentDetails.description,
+        endpoint: agentDetails.endpoint,
+        x402Support: agentDetails.x402Support,
+      });
+
+      const hash = await writePoolFactory({
+        address: AGENT_POOL_FACTORY_ADDRESS,
+        abi: AGENT_POOL_FACTORY_ABI,
+        functionName: "createAgentPool",
+        args: [
+          agentId,
+          smartWalletAddress,
+          {
+            agentURI: agentURIJson,
+            asset: MOCK_USDC_ADDRESS,
+            name: poolConfig.poolName,
+            symbol: poolConfig.poolSymbol,
+            poolOwner: address,
+            dailyCap: parseUSDC(poolConfig.dailyCap),
+            vestingDuration: BigInt(Number(poolConfig.vestingDays) * 86400),
+            metadataURI: poolConfig.metadataURI || "",
+          },
+        ],
+      });
+
+      setPoolTx({ status: "success", hash });
+      setTimeout(() => setCurrentStep(5), 1000);
+    } catch (err) {
+      console.error("Pool creation failed:", err);
+      setPoolTx({
+        status: "error",
+        error: err instanceof Error ? err.message : "Pool creation failed",
+      });
     }
   };
 
@@ -392,7 +462,8 @@ export default function RegisterAgentPage() {
               { num: 1, label: "Details" },
               { num: 2, label: "Policy" },
               { num: 3, label: "Deploy" },
-              { num: 4, label: "Done" },
+              { num: 4, label: "Pool" },
+              { num: 5, label: "Done" },
             ].map((step, idx) => (
               <div key={step.num} className="flex items-center flex-1">
                 <div className="flex flex-col items-center flex-1">
@@ -417,7 +488,7 @@ export default function RegisterAgentPage() {
                     {step.label}
                   </span>
                 </div>
-                {idx < 3 && (
+                {idx < 4 && (
                   <div
                     className={cn(
                       "h-0.5 flex-1 -mt-8 transition-all duration-200",
@@ -654,8 +725,132 @@ export default function RegisterAgentPage() {
           </div>
         )}
 
-        {/* Step 4: Summary */}
+        {/* Step 4: Pool Configuration */}
         {currentStep === 4 && (
+          <div className="max-w-2xl mx-auto">
+            <div className="card">
+              <div>
+                <h2 className="font-display text-2xl font-semibold text-lobster-dark mb-2">Create Agent Pool</h2>
+                <p className="text-lobster-text text-sm">
+                  Deploy an ERC-4626 funding pool for your agent. Investors can deposit USDC and your agent can pull funds daily.
+                </p>
+              </div>
+
+              <div className="space-y-6 mt-6">
+                <div>
+                  <label className="block text-sm font-medium text-lobster-dark mb-2">Pool Name</label>
+                  <input
+                    type="text"
+                    value={poolConfig.poolName}
+                    onChange={(e) => setPoolConfig({ ...poolConfig, poolName: e.target.value })}
+                    className="input-field"
+                    placeholder="My Agent Pool"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-lobster-dark mb-2">Pool Symbol</label>
+                  <input
+                    type="text"
+                    value={poolConfig.poolSymbol}
+                    onChange={(e) => setPoolConfig({ ...poolConfig, poolSymbol: e.target.value })}
+                    className="input-field"
+                    placeholder="PMP-1"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-lobster-dark mb-2">Daily Cap (USDC)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lobster-text font-semibold">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      value={poolConfig.dailyCap}
+                      onChange={(e) => setPoolConfig({ ...poolConfig, dailyCap: e.target.value })}
+                      className="input-field pl-8"
+                      placeholder="100"
+                      min="0"
+                      step="0.000001"
+                    />
+                  </div>
+                  <p className="text-xs text-lobster-text mt-1">Maximum USDC your agent can pull per day</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-lobster-dark mb-2">Vesting Duration (days)</label>
+                  <input
+                    type="number"
+                    value={poolConfig.vestingDays}
+                    onChange={(e) => setPoolConfig({ ...poolConfig, vestingDays: e.target.value })}
+                    className="input-field"
+                    placeholder="30"
+                    min="0"
+                  />
+                  <p className="text-xs text-lobster-text mt-1">Lock period for investor deposits</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-lobster-dark mb-2">Metadata URI (optional)</label>
+                  <input
+                    type="text"
+                    value={poolConfig.metadataURI}
+                    onChange={(e) => setPoolConfig({ ...poolConfig, metadataURI: e.target.value })}
+                    className="input-field"
+                    placeholder="ipfs://... or https://..."
+                  />
+                </div>
+              </div>
+
+              {/* Pool transaction status */}
+              {poolTx.status !== "idle" && (
+                <div className={`p-4 rounded-xl border mt-6 ${
+                  poolTx.status === "success" ? "bg-green-50 border-green-200" :
+                  poolTx.status === "error" ? "bg-red-50 border-red-200" :
+                  "bg-yellow-50 border-yellow-200"
+                }`}>
+                  <p className="text-sm font-medium">
+                    {poolTx.status === "pending" && "Creating pool..."}
+                    {poolTx.status === "success" && "Pool created successfully!"}
+                    {poolTx.status === "error" && (poolTx.error || "Pool creation failed")}
+                  </p>
+                  {poolTx.hash && (
+                    <a
+                      href={`https://sepolia.basescan.org/tx/${poolTx.hash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-lobster-primary hover:text-lobster-hover flex items-center space-x-1 mt-1"
+                    >
+                      <span>View on BaseScan</span>
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-8">
+                <button
+                  onClick={() => setCurrentStep(3)}
+                  className="btn-secondary flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span>Back</span>
+                </button>
+                <button
+                  onClick={handleCreatePool}
+                  disabled={!poolConfig.poolName || !poolConfig.dailyCap || !poolConfig.vestingDays || poolTx.status === "pending"}
+                  className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {poolTx.status === "pending" ? "Creating Pool..." : poolTx.status === "error" ? "Retry" : "Create Pool"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5: Summary */}
+        {currentStep === 5 && (
           <div className="max-w-2xl mx-auto">
             <div className="card text-center py-12">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
