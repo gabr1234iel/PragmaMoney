@@ -20,6 +20,9 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
     /// @notice The authorized gateway address that can call recordUsage
     address public authorizedGateway;
 
+    /// @notice Additional addresses authorized to call recordUsage
+    mapping(address => bool) public authorizedRecorders;
+
     // -- Custom errors --
 
     error ServiceAlreadyRegistered(bytes32 serviceId);
@@ -45,7 +48,7 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
     }
 
     modifier onlyGateway() {
-        if (msg.sender != authorizedGateway) {
+        if (msg.sender != authorizedGateway && !authorizedRecorders[msg.sender]) {
             revert NotAuthorizedGateway(msg.sender);
         }
         _;
@@ -64,6 +67,14 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
         address old = authorizedGateway;
         authorizedGateway = gateway;
         emit GatewayUpdated(old, gateway);
+    }
+
+    /// @notice Add or remove an authorized recorder address
+    /// @param recorder The address to authorize/deauthorize
+    /// @param enabled Whether the address should be authorized
+    function setRecorder(address recorder, bool enabled) external onlyOwner {
+        authorizedRecorders[recorder] = enabled;
+        emit RecorderUpdated(recorder, enabled);
     }
 
     /// @inheritdoc IServiceRegistry

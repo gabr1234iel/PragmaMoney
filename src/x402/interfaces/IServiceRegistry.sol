@@ -45,6 +45,8 @@ interface IServiceRegistry {
         uint256 revenue
     );
 
+    event RecorderUpdated(address indexed recorder, bool enabled);
+
     /// @notice Register a new service
     /// @param serviceId Unique identifier for the service
     /// @param name Human-readable name for the service
@@ -78,6 +80,11 @@ interface IServiceRegistry {
     /// @param calls Number of calls made
     /// @param revenue Revenue generated in USDC
     function recordUsage(bytes32 serviceId, uint256 calls, uint256 revenue) external;
+
+    /// @notice Add or remove an authorized recorder address
+    /// @param recorder The address to authorize/deauthorize
+    /// @param enabled Whether the address should be authorized
+    function setRecorder(address recorder, bool enabled) external;
 
     /// @notice Get the total number of registered services
     /// @return count The number of services

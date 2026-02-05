@@ -28,6 +28,10 @@ const GATEWAY_ABI = [
   "function getPayment(bytes32 paymentId) view returns (tuple(address payer, bytes32 serviceId, uint256 calls, uint256 amount, uint256 timestamp))",
 ];
 
+const SERVICE_REGISTRY_ABI = [
+  "function recordUsage(bytes32 serviceId, uint256 calls, uint256 revenue) external",
+];
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -58,6 +62,42 @@ function isFreeRequest(req: Request): boolean {
   }
 
   return false;
+}
+
+/**
+ * Fire-and-forget: call ServiceRegistry.recordUsage() on-chain.
+ * Records x402 Path A usage stats without blocking the HTTP response.
+ */
+function fireRecordUsage(serviceId: string, calls: number, amount: string): void {
+  if (!config.proxySignerKey) {
+    console.warn("[x402Gate] No PROXY_SIGNER_KEY configured, skipping on-chain recordUsage");
+    return;
+  }
+
+  // Only call for on-chain services (bytes32 hex: 0x + 64 hex chars)
+  if (!/^0x[0-9a-fA-F]{64}$/.test(serviceId)) {
+    return;
+  }
+
+  const provider = new ethers.JsonRpcProvider(config.gatewayRpcUrl);
+  const signer = new ethers.Wallet(config.proxySignerKey, provider);
+  const registry = new ethers.Contract(
+    config.serviceRegistryAddress,
+    SERVICE_REGISTRY_ABI,
+    signer
+  );
+
+  registry.recordUsage(serviceId, calls, amount)
+    .then((tx: ethers.TransactionResponse) => {
+      console.log(`[x402Gate] recordUsage tx sent: ${tx.hash}`);
+      return tx.wait();
+    })
+    .then(() => {
+      console.log(`[x402Gate] recordUsage confirmed for serviceId=${serviceId}`);
+    })
+    .catch((err: Error) => {
+      console.error(`[x402Gate] recordUsage failed: ${err.message}`);
+    });
 }
 
 /**
@@ -176,6 +216,9 @@ export function createX402Gate(): RequestHandler {
           status: "settled",
         });
         recordTransaction(tx);
+
+        // Fire-and-forget: record usage on-chain for stats tracking
+        fireRecordUsage(resource.id, 1, resource.pricing.pricePerCall);
 
         next();
         return;

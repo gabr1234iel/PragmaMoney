@@ -12,6 +12,7 @@ contract ServiceRegistryTest is Test {
     address public serviceOwner = makeAddr("serviceOwner");
     address public gateway = makeAddr("gateway");
     address public stranger = makeAddr("stranger");
+    address public recorder = makeAddr("recorder");
 
     bytes32 public constant SERVICE_ID = keccak256("test-service-1");
     uint256 public constant PRICE_PER_CALL = 1000; // 0.001 USDC (6 decimals)
@@ -394,5 +395,87 @@ contract ServiceRegistryTest is Test {
         vm.prank(stranger);
         vm.expectRevert(); // Ownable: caller is not the owner
         registry.setGateway(stranger);
+    }
+
+    // ==================== setRecorder ====================
+
+    function test_SetRecorder_Success() public {
+        vm.prank(registryOwner);
+        vm.expectEmit(true, false, false, true);
+        emit IServiceRegistry.RecorderUpdated(recorder, true);
+        registry.setRecorder(recorder, true);
+
+        assertTrue(registry.authorizedRecorders(recorder));
+    }
+
+    function test_SetRecorder_Disable() public {
+        vm.prank(registryOwner);
+        registry.setRecorder(recorder, true);
+        assertTrue(registry.authorizedRecorders(recorder));
+
+        vm.prank(registryOwner);
+        registry.setRecorder(recorder, false);
+        assertFalse(registry.authorizedRecorders(recorder));
+    }
+
+    function test_SetRecorder_RevertNotOwner() public {
+        vm.prank(stranger);
+        vm.expectRevert();
+        registry.setRecorder(recorder, true);
+    }
+
+    function test_RecordUsage_ByRecorder() public {
+        // Enable recorder
+        vm.prank(registryOwner);
+        registry.setRecorder(recorder, true);
+
+        // Register a service
+        vm.prank(serviceOwner);
+        registry.registerService(
+            SERVICE_ID,
+            SERVICE_NAME,
+            PRICE_PER_CALL,
+            ENDPOINT,
+            IServiceRegistry.ServiceType.API
+        );
+
+        // Recorder calls recordUsage
+        vm.prank(recorder);
+        vm.expectEmit(true, false, false, true);
+        emit IServiceRegistry.ServiceUsageRecorded(SERVICE_ID, 1, 1000);
+        registry.recordUsage(SERVICE_ID, 1, 1000);
+
+        IServiceRegistry.Service memory svc = registry.getService(SERVICE_ID);
+        assertEq(svc.totalCalls, 1);
+        assertEq(svc.totalRevenue, 1000);
+    }
+
+    function test_RecordUsage_GatewayStillWorks() public {
+        // Enable a recorder
+        vm.prank(registryOwner);
+        registry.setRecorder(recorder, true);
+
+        // Register a service
+        vm.prank(serviceOwner);
+        registry.registerService(
+            SERVICE_ID,
+            SERVICE_NAME,
+            PRICE_PER_CALL,
+            ENDPOINT,
+            IServiceRegistry.ServiceType.API
+        );
+
+        // Gateway still works
+        vm.prank(gateway);
+        registry.recordUsage(SERVICE_ID, 5, 5000);
+
+        // Recorder also works
+        vm.prank(recorder);
+        registry.recordUsage(SERVICE_ID, 3, 3000);
+
+        // Cumulative
+        IServiceRegistry.Service memory svc = registry.getService(SERVICE_ID);
+        assertEq(svc.totalCalls, 8);
+        assertEq(svc.totalRevenue, 8000);
     }
 }
