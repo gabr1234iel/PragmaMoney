@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { keccak256, toHex } from "viem";
 import { ServiceType, SERVICE_TYPE_LABELS } from "@/types";
@@ -171,7 +172,16 @@ export default function RegisterServicePage() {
   }
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-12 relative">
+      {/* Floating Mascots */}
+      <div className="absolute top-32 left-8 pointer-events-none hidden xl:block rotate-[-12deg] drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={70} height={70} />
+      </div>
+
+      <div className="absolute bottom-40 right-12 pointer-events-none hidden xl:block rotate-[25deg] drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={75} height={75} />
+      </div>
+
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-12 text-center">

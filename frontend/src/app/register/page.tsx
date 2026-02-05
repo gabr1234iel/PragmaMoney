@@ -1,11 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Server, Bot } from "lucide-react";
 
 export default function RegisterHubPage() {
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-12 relative">
+      <div className="absolute top-16 left-8 pointer-events-none hidden lg:block -rotate-6 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={70} height={70} />
+      </div>
+      <div className="absolute bottom-32 right-12 pointer-events-none hidden lg:block rotate-3 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={75} height={75} />
+      </div>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-12 text-center">
           <h1 className="font-display text-5xl font-bold text-lobster-dark mb-4">

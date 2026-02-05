@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useServiceRegistry } from "@/hooks/useServiceRegistry";
 import { useX402Payment } from "@/hooks/useX402Payment";
@@ -126,7 +127,20 @@ function PlaygroundContent() {
     : null;
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-12 relative">
+      {/* Floating Mascots */}
+      <div className="absolute top-20 right-12 pointer-events-none hidden xl:block -rotate-[15deg] drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={75} height={75} />
+      </div>
+
+      <div className="absolute bottom-32 right-20 pointer-events-none hidden xl:block rotate-[20deg] drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={65} height={65} />
+      </div>
+
+      <div className="absolute top-64 left-8 pointer-events-none hidden xl:block rotate-[5deg] drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={70} height={70} />
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-12">

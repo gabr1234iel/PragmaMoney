@@ -8,6 +8,7 @@ import { useAgentRegistry } from "@/hooks/useAgentRegistry";
 import { ServiceType, SERVICE_TYPE_LABELS } from "@/types";
 import { Search, Filter, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 export default function MarketplacePage() {
   const { services, isLoading } = useServiceRegistry();
@@ -36,7 +37,20 @@ export default function MarketplacePage() {
   });
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-12 relative">
+      {/* Floating mascots */}
+      <div className="absolute top-28 right-10 pointer-events-none hidden xl:block rotate-12 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={90} height={90} />
+      </div>
+      <div className="absolute top-[500px] left-6 pointer-events-none hidden xl:block -rotate-12 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={70} height={70} />
+      </div>
+      <div className="absolute bottom-48 right-12 pointer-events-none hidden lg:block rotate-6 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={80} height={80} />
+      </div>
+      <div className="absolute top-[800px] right-[5%] pointer-events-none hidden xl:block -rotate-[8deg] drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={60} height={60} />
+      </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-12">

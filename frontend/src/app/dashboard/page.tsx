@@ -9,6 +9,7 @@ import { formatUSDC } from "@/lib/utils";
 import { Wallet, DollarSign, TrendingUp, Activity, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { Address } from "viem";
+import Image from "next/image";
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount();
@@ -47,7 +48,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-12 relative">
+      {/* Floating Mascots */}
+      <div className="absolute top-20 right-10 pointer-events-none hidden xl:block rotate-12 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={80} height={80} />
+      </div>
+
+      <div className="absolute bottom-40 left-12 pointer-events-none hidden lg:block -rotate-6 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={70} height={70} />
+      </div>
+
+      <div className="absolute top-1/2 right-20 pointer-events-none hidden xl:block rotate-45 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={60} height={60} />
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-12">

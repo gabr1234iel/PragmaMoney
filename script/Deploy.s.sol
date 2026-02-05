@@ -160,3 +160,48 @@ contract DeployAgentFactory is Script {
 }
 
 // forge script script/Deploy.s.sol:DeployAgentFactory --rpc-url base_sepolia --broadcast --verify -vvvv
+
+/// @title RedeployGatewayRealUSDC
+/// @notice Redeploys ServiceRegistry + x402Gateway using real Base Sepolia USDC
+/// @dev Fixes token mismatch: old gateway used MockUSDC, this uses real USDC (0x036CbD...)
+///      so both x402 facilitator path and gateway path use the same token.
+contract RedeployGatewayRealUSDC is Script {
+    // Real USDC on Base Sepolia (EIP-3009 compatible, used by x402 facilitator)
+    address constant REAL_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        address deployer = vm.addr(deployerPrivateKey);
+        address proxySigner = vm.envAddress("PROXY_SIGNER_ADDRESS");
+
+        console2.log("Deployer:", deployer);
+        console2.log("Proxy signer:", proxySigner);
+        console2.log("USDC (real):", REAL_USDC);
+        console2.log("");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // 1. Deploy new ServiceRegistry
+        ServiceRegistry registry = new ServiceRegistry(deployer);
+
+        // 2. Deploy new x402Gateway pointing to new registry, using REAL USDC
+        x402Gateway gateway = new x402Gateway(address(registry), REAL_USDC);
+
+        // 3. Authorize gateway on registry
+        registry.setGateway(address(gateway));
+
+        // 4. Authorize proxy signer as recorder (for x402 Path A usage tracking)
+        registry.setRecorder(proxySigner, true);
+
+        vm.stopBroadcast();
+
+        console2.log("");
+        console2.log("=== Redeployment Summary (Real USDC) ===");
+        console2.log("ServiceRegistry:", address(registry));
+        console2.log("x402Gateway:", address(gateway));
+        console2.log("USDC:", REAL_USDC);
+        console2.log("Proxy signer authorized:", proxySigner);
+    }
+}
+
+// forge script script/Deploy.s.sol:RedeployGatewayRealUSDC --rpc-url base_sepolia --broadcast --verify -vvvv
