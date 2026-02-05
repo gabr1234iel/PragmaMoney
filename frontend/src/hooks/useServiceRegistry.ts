@@ -47,6 +47,7 @@ export function useServiceRegistry() {
         fetched.push({
           id: serviceId,
           owner: data.owner,
+          name: data.name,
           pricePerCall: data.pricePerCall,
           endpoint: data.endpoint,
           serviceType: data.serviceType as ServiceType,

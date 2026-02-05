@@ -14,6 +14,7 @@ interface IServiceRegistry {
 
     struct Service {
         address owner;
+        string name;
         uint256 pricePerCall;
         string endpoint;
         ServiceType serviceType;
@@ -25,6 +26,7 @@ interface IServiceRegistry {
     event ServiceRegistered(
         bytes32 indexed serviceId,
         address indexed owner,
+        string name,
         uint256 pricePerCall,
         ServiceType serviceType
     );
@@ -45,11 +47,13 @@ interface IServiceRegistry {
 
     /// @notice Register a new service
     /// @param serviceId Unique identifier for the service
+    /// @param name Human-readable name for the service
     /// @param pricePerCall Price in USDC (6 decimals) per API call
     /// @param endpoint The service endpoint URL
     /// @param serviceType The type of service
     function registerService(
         bytes32 serviceId,
+        string calldata name,
         uint256 pricePerCall,
         string calldata endpoint,
         ServiceType serviceType

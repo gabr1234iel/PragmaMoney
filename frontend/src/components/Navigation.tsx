@@ -39,7 +39,7 @@ export function Navigation() {
                 href={link.href}
                 className={cn(
                   "px-4 py-2 rounded-lg font-medium transition-all duration-200",
-                  pathname === link.href
+                  pathname === link.href || pathname.startsWith(link.href + "/")
                     ? "bg-lobster-surface text-lobster-primary"
                     : "text-lobster-dark hover:bg-lobster-surface/50 hover:text-lobster-primary"
                 )}
@@ -80,7 +80,7 @@ export function Navigation() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
                   "block px-4 py-3 rounded-xl font-medium transition-all duration-200",
-                  pathname === link.href
+                  pathname === link.href || pathname.startsWith(link.href + "/")
                     ? "bg-lobster-surface text-lobster-primary"
                     : "text-lobster-dark hover:bg-lobster-surface/50"
                 )}

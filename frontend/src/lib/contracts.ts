@@ -4,10 +4,12 @@ import { Address } from "viem";
 // Real USDC — required by x402 facilitator (EIP-3009 support)
 export const USDC_ADDRESS: Address = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 // MockUSDC — used by deployed gateway/registry contracts for testing
-export const MOCK_USDC_ADDRESS: Address = "0x8E62c4749b6350943A52a34143C60EA36818f81F";
-export const GATEWAY_ADDRESS: Address = "0x6ee8F65106AEb03E84c31F82f7DE821c97d7D8b6";
-export const SERVICE_REGISTRY_ADDRESS: Address = "0x2112837f86c6aB7D4acA2B71df9944Ccc64f743A";
-export const AGENT_FACTORY_ADDRESS: Address = "0x77F3195CE8E69A76345dBfe5cdAa998a59dE99f5";
+export const MOCK_USDC_ADDRESS: Address = "0x00373f3dc69337e9f141d08a68026A63b88F3051";
+export const GATEWAY_ADDRESS: Address = "0x0122fEEc4150A67E6df8bC96dbe32a9B056a3E10";
+export const SERVICE_REGISTRY_ADDRESS: Address = "0xC6E2C02c7D39c8C42d8B1f6AC45806c2C6b387D0";
+export const AGENT_FACTORY_ADDRESS: Address = "0x8B4294B349530d03Fe94C216fc771206637AFDa9";
+export const IDENTITY_REGISTRY_ADDRESS: Address = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
+export const REPUTATION_REGISTRY_ADDRESS: Address = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 
 // Minimal ABIs for contract interactions
 export const ERC20_ABI = [
@@ -58,6 +60,7 @@ export const SERVICE_REGISTRY_ABI = [
   {
     inputs: [
       { name: "serviceId", type: "bytes32" },
+      { name: "name", type: "string" },
       { name: "pricePerCall", type: "uint256" },
       { name: "endpoint", type: "string" },
       { name: "serviceType", type: "uint8" },
@@ -74,6 +77,7 @@ export const SERVICE_REGISTRY_ABI = [
       {
         components: [
           { name: "owner", type: "address" },
+          { name: "name", type: "string" },
           { name: "pricePerCall", type: "uint256" },
           { name: "endpoint", type: "string" },
           { name: "serviceType", type: "uint8" },
@@ -142,6 +146,68 @@ export const X402_GATEWAY_ABI = [
         type: "tuple",
       },
     ],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
+
+export const IDENTITY_REGISTRY_ABI = [
+  {
+    inputs: [{ name: "agentURI", type: "string" }],
+    name: "register",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "agentId", type: "uint256" }],
+    name: "getAgentWallet",
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    name: "ownerOf",
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "newWallet", type: "address" },
+      { name: "deadline", type: "uint256" },
+      { name: "sig", type: "bytes" },
+    ],
+    name: "setAgentWallet",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
+export const AGENT_ACCOUNT_FACTORY_ABI = [
+  {
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "operator", type: "address" },
+      { name: "salt", type: "bytes32" },
+      { name: "dailyLimit", type: "uint256" },
+      { name: "expiresAt", type: "uint256" },
+    ],
+    name: "createAccount",
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "salt", type: "bytes32" },
+    ],
+    name: "getAddress",
+    outputs: [{ name: "", type: "address" }],
     stateMutability: "view",
     type: "function",
   },

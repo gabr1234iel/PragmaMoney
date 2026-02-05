@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useServiceRegistry } from "@/hooks/useServiceRegistry";
 import { useX402Payment } from "@/hooks/useX402Payment";
@@ -31,6 +31,8 @@ function PlaygroundContent() {
   const { makePayment, isLoading: paymentLoading, error: paymentError, proxyUrl } = useX402Payment();
 
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Auto-select service from query param (e.g. /playground?service=0x...)
   useEffect(() => {
@@ -40,6 +42,18 @@ function PlaygroundContent() {
       if (match) setSelectedService(match);
     }
   }, [searchParams, services, selectedService]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<{
@@ -60,6 +74,7 @@ function PlaygroundContent() {
     setSelectedService(service || null);
     setResponse(null);
     setRequestError(null);
+    setIsDropdownOpen(false);
   };
 
   const handleExecute = async (
@@ -157,27 +172,64 @@ function PlaygroundContent() {
                   ))}
                 </div>
               ) : (
-                <div className="relative">
-                  <select
-                    onChange={(e) => handleServiceSelect(e.target.value)}
-                    value={selectedService?.id || ""}
-                    className="w-full input-field appearance-none pr-10"
+                <div className="relative" ref={dropdownRef}>
+                  {/* Custom Dropdown Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="w-full input-field text-left pr-10 flex items-center justify-between"
                   >
-                    <option value="">Select a service...</option>
-                    {services.map((service) => (
-                      <option key={service.id} value={service.id}>
-                        {getServiceLabel(service)}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-lobster-text pointer-events-none" />
+                    <span
+                      className={
+                        selectedService ? "text-lobster-dark" : "text-lobster-text"
+                      }
+                    >
+                      {selectedService
+                        ? getServiceLabel(selectedService)
+                        : "Select a service..."}
+                    </span>
+                    <ChevronDown
+                      className={`w-5 h-5 text-lobster-text transition-transform duration-200 ${
+                        isDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {/* Custom Dropdown Panel */}
+                  {isDropdownOpen && (
+                    <div className="absolute z-50 w-full mt-2 bg-white border-2 border-lobster-border rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                      {services.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-lobster-text">
+                          No services available
+                        </div>
+                      ) : (
+                        services.map((service) => {
+                          const isSelected = selectedService?.id === service.id;
+                          return (
+                            <button
+                              key={service.id}
+                              type="button"
+                              onClick={() => handleServiceSelect(service.id)}
+                              className={`w-full px-4 py-3 text-left transition-colors duration-200 ${
+                                isSelected
+                                  ? "bg-lobster-primary/10 text-lobster-primary font-medium"
+                                  : "text-lobster-dark hover:bg-lobster-surface"
+                              }`}
+                            >
+                              {getServiceLabel(service)}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
             {/* Service Details */}
             {selectedService && (
-              <div className="card">
+              <div className="card overflow-hidden">
                 <h3 className="font-display text-lg font-semibold text-lobster-dark mb-4">
                   Service Details
                 </h3>

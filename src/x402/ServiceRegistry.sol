@@ -28,6 +28,7 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
     error NotServiceOwner(bytes32 serviceId, address caller);
     error NotAuthorizedGateway(address caller);
     error ZeroPricePerCall();
+    error EmptyName();
     error EmptyEndpoint();
 
     // -- Events --
@@ -68,12 +69,16 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
     /// @inheritdoc IServiceRegistry
     function registerService(
         bytes32 serviceId,
+        string calldata name,
         uint256 pricePerCall,
         string calldata endpoint,
         ServiceType serviceType
     ) external {
         if (_services[serviceId].owner != address(0)) {
             revert ServiceAlreadyRegistered(serviceId);
+        }
+        if (bytes(name).length == 0) {
+            revert EmptyName();
         }
         if (pricePerCall == 0) {
             revert ZeroPricePerCall();
@@ -84,6 +89,7 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
 
         _services[serviceId] = Service({
             owner: msg.sender,
+            name: name,
             pricePerCall: pricePerCall,
             endpoint: endpoint,
             serviceType: serviceType,
@@ -94,7 +100,7 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
 
         _serviceIds.push(serviceId);
 
-        emit ServiceRegistered(serviceId, msg.sender, pricePerCall, serviceType);
+        emit ServiceRegistered(serviceId, msg.sender, name, pricePerCall, serviceType);
     }
 
     /// @inheritdoc IServiceRegistry

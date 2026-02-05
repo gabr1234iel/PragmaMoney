@@ -40,6 +40,7 @@ contract x402GatewayTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            "Test Service",
             PRICE_PER_CALL,
             ENDPOINT,
             IServiceRegistry.ServiceType.API

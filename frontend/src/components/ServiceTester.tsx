@@ -102,7 +102,7 @@ export function ServiceTester({
           <label className="block text-sm font-medium text-lobster-text mb-2">
             Endpoint
           </label>
-          <div className="bg-lobster-surface px-4 py-3 rounded-xl font-mono text-sm text-lobster-dark">
+          <div className="bg-lobster-surface px-4 py-3 rounded-xl font-mono text-sm text-lobster-dark break-all overflow-hidden">
             {service.endpoint}
           </div>
         </div>

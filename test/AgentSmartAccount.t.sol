@@ -7,6 +7,7 @@ import {AgentAccountFactory} from "../src/Wallet/AgentAccountFactory.sol";
 import {SpendingPolicyLib} from "../src/Wallet/SpendingPolicyLib.sol";
 import {MockERC20} from "./helpers/MockERC20.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract AgentSmartAccountTest is Test {
     AgentSmartAccount public implementation;
@@ -380,5 +381,83 @@ contract AgentSmartAccountTest is Test {
         vm.expectEmit(false, false, false, true);
         emit AgentSmartAccount.BatchExecuted(1);
         account.executeBatch(dests, values, funcs);
+    }
+
+    // ==================== EIP-1271 isValidSignature ====================
+
+    function test_IsValidSignature_ValidOperatorSignature() public {
+        bytes32 hash = keccak256("test-message");
+
+        // Sign with operator's private key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(operatorKey, hash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Should return the EIP-1271 magic value
+        bytes4 result = account.isValidSignature(hash, signature);
+        assertEq(result, bytes4(0x1626ba7e), "Should return EIP-1271 magic value for valid operator signature");
+    }
+
+    function test_IsValidSignature_InvalidSigner() public {
+        bytes32 hash = keccak256("test-message");
+
+        // Sign with a non-operator private key (use stranger)
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(12345, hash); // Random private key, not operator
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Should return invalid magic value
+        bytes4 result = account.isValidSignature(hash, signature);
+        assertEq(result, bytes4(0xffffffff), "Should return invalid magic value for non-operator signature");
+    }
+
+    function test_IsValidSignature_MalformedSignature() public {
+        bytes32 hash = keccak256("test-message");
+        bytes memory invalidSig = new bytes(64); // Too short (needs 65 bytes for r, s, v)
+
+        // ECDSA.recover will revert on invalid signature length
+        vm.expectRevert();
+        account.isValidSignature(hash, invalidSig);
+    }
+
+    function test_IsValidSignature_EmptySignature() public {
+        bytes32 hash = keccak256("test-message");
+        bytes memory emptySig = new bytes(0);
+
+        // ECDSA.recover will revert on empty signature
+        vm.expectRevert();
+        account.isValidSignature(hash, emptySig);
+    }
+
+    function test_IsValidSignature_DifferentHash() public {
+        bytes32 hash1 = keccak256("test-message-1");
+        bytes32 hash2 = keccak256("test-message-2");
+
+        // Sign hash1 with operator
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(operatorKey, hash1);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Try to verify with hash2 (should fail)
+        bytes4 result = account.isValidSignature(hash2, signature);
+        assertEq(result, bytes4(0xffffffff), "Should return invalid magic value when signature is for different hash");
+    }
+
+    function test_IsValidSignature_NoStateMutation() public {
+        bytes32 hash = keccak256("test-message");
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(operatorKey, hash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Get initial state
+        SpendingPolicyLib.Policy memory policyBefore = account.getPolicy();
+        SpendingPolicyLib.DailySpend memory dailyBefore = account.getDailySpend();
+
+        // Call isValidSignature (view function)
+        account.isValidSignature(hash, signature);
+
+        // Verify no state changed
+        SpendingPolicyLib.Policy memory policyAfter = account.getPolicy();
+        SpendingPolicyLib.DailySpend memory dailyAfter = account.getDailySpend();
+
+        assertEq(policyBefore.dailyLimit, policyAfter.dailyLimit);
+        assertEq(policyBefore.expiresAt, policyAfter.expiresAt);
+        assertEq(dailyBefore.amount, dailyAfter.amount);
     }
 }

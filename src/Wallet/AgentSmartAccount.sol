@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {BaseAccount} from "account-abstraction/core/BaseAccount.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -75,6 +76,7 @@ contract AgentSmartAccount is BaseAccount, Initializable {
     error ExecutionFailed(address dest);
     error BatchLengthMismatch();
     error AlreadyInitialized();
+    error SliceOutOfBounds();
 
     // -- Modifiers --
 
@@ -409,11 +411,29 @@ contract AgentSmartAccount is BaseAccount, Initializable {
         return allowedTokens[token];
     }
 
+    // -- EIP-1271 --
+
+    /// @notice Validate a signature on behalf of this smart account (EIP-1271)
+    /// @dev Returns the magic value if the recovered signer matches the operator.
+    ///      Used by external contracts (e.g. IdentityRegistry) to verify wallet binding signatures.
+    /// @param hash The hash that was signed
+    /// @param signature The ECDSA signature bytes
+    /// @return magicValue `0x1626ba7e` if valid, `0xffffffff` otherwise
+    function isValidSignature(bytes32 hash, bytes memory signature) external view returns (bytes4 magicValue) {
+        address recovered = ECDSA.recover(hash, signature);
+        if (recovered == operator) {
+            return bytes4(0x1626ba7e);
+        }
+        return bytes4(0xffffffff);
+    }
+
     // -- Internal helpers --
 
     /// @dev Slice bytes from an offset (used to strip function selector from inner calldata)
     function _sliceBytes(bytes memory data, uint256 start) internal pure returns (bytes memory) {
-        require(data.length >= start, "slice out of bounds");
+        if (data.length < start) {
+            revert SliceOutOfBounds();
+        }
         uint256 len = data.length - start;
         bytes memory result = new bytes(len);
         for (uint256 i; i < len;) {

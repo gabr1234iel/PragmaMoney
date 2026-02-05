@@ -63,6 +63,14 @@ export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   [ServiceType.OTHER]: "Other",
 };
 
+export interface Agent {
+  agentId: bigint;
+  owner: string;
+  walletAddress: string;
+  agentURI: string;
+  name: string;
+}
+
 export const SERVICE_TYPE_COLORS: Record<ServiceType, string> = {
   [ServiceType.COMPUTE]: "bg-blue-100 text-blue-800 border-blue-200",
   [ServiceType.STORAGE]: "bg-green-100 text-green-800 border-green-200",
