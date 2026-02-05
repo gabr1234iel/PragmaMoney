@@ -3,15 +3,13 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {ReputationReporter} from "../src/ERC-8004/ReputationReporter.sol";
-import {ReputationRegistryUpgradeable} from "../src/ERC-8004/ReputationRegistry.sol";
-import {IdentityRegistryUpgradeable} from "../src/ERC-8004/IdentityRegistry.sol";
+import {IReputationRegistry} from "../src/interfaces/IReputationRegistry.sol";
+import {IIdentityRegistry} from "../src/interfaces/IIdentityRegistry.sol";
 import {Errors} from "../src/errors/Errors.sol";
 import {BaseTest} from "./BaseTest.t.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
 contract ReputationReporterTest is BaseTest {
-    IdentityRegistryUpgradeable internal id;
-    ReputationRegistryUpgradeable internal rep;
+    IIdentityRegistry internal id;
+    IReputationRegistry internal rep;
     ReputationReporter internal reporter;
 
     function setUp() public {
@@ -49,7 +47,7 @@ contract ReputationReporterTest is BaseTest {
     /// @notice setReputationRegistry requires auth and updates
     function test_setReputationRegistry_requiresAuth_and_updates() public {
         vm.startPrank(deployer);
-        ReputationRegistryUpgradeable rep2 = _deployReputation(address(id));
+        IReputationRegistry rep2 = _deployReputation(address(id));
         vm.stopPrank();
 
         vm.prank(alice);

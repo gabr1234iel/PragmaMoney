@@ -6,17 +6,15 @@ import {BaseTest} from "./BaseTest.t.sol";
 import {ScoreOracle} from "../src/ERC-8004/ScoreOracle.sol";
 import {AgentPool} from "../src/Launchpad/AgentPool.sol";
 import {AgentFactory} from "../src/Launchpad/AgentFactory.sol";
-import {ReputationRegistryUpgradeable} from "../src/ERC-8004/ReputationRegistry.sol";
 import {ReputationReporter} from "../src/ERC-8004/ReputationReporter.sol";
-import {IdentityRegistryUpgradeable} from "../src/ERC-8004/IdentityRegistry.sol";
 import {IIdentityRegistry} from "../src/interfaces/IIdentityRegistry.sol";
 import {IAgentFactory} from "../src/interfaces/IAgentFactory.sol";
 import {IReputationRegistry} from "../src/interfaces/IReputationRegistry.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ScoreOracleTest is BaseTest {
-    IdentityRegistryUpgradeable internal id;
-    ReputationRegistryUpgradeable internal rep;
+    IIdentityRegistry internal id;
+    IReputationRegistry internal rep;
     ReputationReporter internal reporter;
     AgentFactory internal factory;
     AgentPool internal pool;

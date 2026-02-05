@@ -4,13 +4,13 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {Addresses} from "./Addresses.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {IdentityRegistryUpgradeable} from "../src/ERC-8004/IdentityRegistry.sol";
-import {ReputationRegistryUpgradeable} from "../src/ERC-8004/ReputationRegistry.sol";
+import {IIdentityRegistry} from "../src/interfaces/IIdentityRegistry.sol";
+import {IReputationRegistry} from "../src/interfaces/IReputationRegistry.sol";
 import {ReputationReporter} from "../src/ERC-8004/ReputationReporter.sol";
 import {AgentPool} from "../src/Launchpad/AgentPool.sol";
 import {AgentFactory} from "../src/Launchpad/AgentFactory.sol";
 import {IIdentityRegistry as FactoryIdentityRegistry} from "../src/interfaces/IIdentityRegistry.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract BaseTest is Test {
     address internal deployer = address(0xD3D3);
@@ -59,20 +59,24 @@ contract BaseTest is Test {
         usdc.approve(address(pool), amount);
     }
 
-    function _deployIdentity() internal returns (IdentityRegistryUpgradeable id) {
-        IdentityRegistryUpgradeable impl = new IdentityRegistryUpgradeable();
-        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), "");
-        id = IdentityRegistryUpgradeable(address(proxy));
-        _setOwnableOwner(address(id), deployer);
-        id.initialize();
+    function _deployIdentity() internal returns (IIdentityRegistry id) {
+        Addresses addrs = new Addresses();
+        address identityAddr = vm.envOr(
+            "IDENTITY_REGISTRY",
+            addrs.getAddress(DEFAULT_CHAIN, "IdentityRegistry")
+        );
+        require(identityAddr != address(0), "set IDENTITY_REGISTRY");
+        id = IIdentityRegistry(identityAddr);
     }
 
-    function _deployReputation(address identity) internal returns (ReputationRegistryUpgradeable rep) {
-        ReputationRegistryUpgradeable impl = new ReputationRegistryUpgradeable();
-        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), "");
-        rep = ReputationRegistryUpgradeable(address(proxy));
-        _setOwnableOwner(address(rep), deployer);
-        rep.initialize(identity);
+    function _deployReputation(address) internal returns (IReputationRegistry rep) {
+        Addresses addrs = new Addresses();
+        address repAddr = vm.envOr(
+            "REPUTATION_REGISTRY",
+            addrs.getAddress(DEFAULT_CHAIN, "ReputationRegistry")
+        );
+        require(repAddr != address(0), "set REPUTATION_REGISTRY");
+        rep = IReputationRegistry(repAddr);
     }
 
     function _deployReporter(address reputationRegistry, address identityRegistry)
@@ -88,8 +92,8 @@ contract BaseTest is Test {
     function deployAll()
         internal
         returns (
-            IdentityRegistryUpgradeable id,
-            ReputationRegistryUpgradeable rep,
+            IIdentityRegistry id,
+            IReputationRegistry rep,
             ReputationReporter reporter,
             AgentPool pool,
             AgentFactory factory

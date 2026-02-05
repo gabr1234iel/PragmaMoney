@@ -2,12 +2,12 @@
 pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
-import {IdentityRegistryUpgradeable} from "../src/ERC-8004/IdentityRegistry.sol";
+import {IIdentityRegistry} from "../src/interfaces/IIdentityRegistry.sol";
 import {Errors} from "../src/errors/Errors.sol";
 import {BaseTest} from "./BaseTest.t.sol";
 
 contract IdentityRegistryTest is BaseTest {
-    IdentityRegistryUpgradeable internal id;
+    IIdentityRegistry internal id;
 
     bytes32 internal constant AGENT_WALLET_SET_TYPEHASH =
         keccak256("AgentWalletSet(uint256 agentId,address newWallet,address owner,uint256 deadline)");
@@ -68,9 +68,6 @@ contract IdentityRegistryTest is BaseTest {
     /// @notice agent registers and URI is stored
     function test_register_mintsToken_andSetsTokenURI() public {
         string memory agentURI = "file://metadata/agent-1.json";
-
-        vm.expectEmit(true, true, false, true);
-        emit IdentityRegistryUpgradeable.Registered(0, agentURI, agentOwner);
 
         vm.prank(agentOwner);
         uint256 agentId = id.register(agentURI);

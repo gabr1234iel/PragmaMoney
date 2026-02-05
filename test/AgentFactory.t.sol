@@ -5,8 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {AgentFactory} from "../src/Launchpad/AgentFactory.sol";
 import {IIdentityRegistry as FactoryIdentityRegistry} from "../src/interfaces/IIdentityRegistry.sol";
 import {AgentPool} from "../src/Launchpad/AgentPool.sol";
-import {IdentityRegistryUpgradeable} from "../src/ERC-8004/IdentityRegistry.sol";
-import {ReputationRegistryUpgradeable} from "../src/ERC-8004/ReputationRegistry.sol";
+import {IIdentityRegistry} from "../src/interfaces/IIdentityRegistry.sol";
+import {IReputationRegistry} from "../src/interfaces/IReputationRegistry.sol";
 import {ReputationReporter} from "../src/ERC-8004/ReputationReporter.sol";
 import {Errors} from "../src/errors/Errors.sol";
 import {BaseTest} from "./BaseTest.t.sol";
@@ -15,7 +15,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract AgentFactoryTest is BaseTest {
-    IdentityRegistryUpgradeable internal id;
+    IIdentityRegistry internal id;
     AgentFactory internal factory;
     ReputationReporter internal reporter;
 
@@ -24,7 +24,7 @@ contract AgentFactoryTest is BaseTest {
         _setupUsdc();
         vm.startPrank(deployer);
         id = _deployIdentity();
-        ReputationRegistryUpgradeable rep = _deployReputation(address(id));
+        IReputationRegistry rep = _deployReputation(address(id));
         reporter = _deployReporter(address(rep), address(id));
         factory = new AgentFactory(FactoryIdentityRegistry(address(id)), deployer, deployer, deployer, address(reporter));
         reporter.setAdmin(address(factory));

@@ -41,6 +41,8 @@ contract Addresses {
 
     function _addBaseSepoliaValues() private {
         values[baseSepolia]["USDC"] = toBytes32(0x036CbD53842c5426634e7929541eC2318f3dCF7e);
+        values[baseSepolia]["IdentityRegistry"] = toBytes32(0x8004A818BFB912233c491871b3d84c89A494BD9e);
+        values[baseSepolia]["ReputationRegistry"] = toBytes32(0x8004B663056A597Dffe9eCcC1965A193B7388713);
     }
 
     function toBytes32(address a) public pure returns (bytes32) {
