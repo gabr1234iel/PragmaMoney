@@ -261,6 +261,11 @@ registerAgentRouter.post("/setup", async (req: Request, res: Response) => {
     const smartAccountAddress: string = await factory["getAddress(address,bytes32)"](deployerAddress, agentIdBytes32);
     console.log(`[register-agent/setup] Smart account: ${smartAccountAddress}, tx=${createReceipt.hash}`);
 
+    // Wait for RPC state propagation (createAccount and setTargetAllowed in
+    // the same block can race on load-balanced RPCs)
+    console.log(`[register-agent/setup] Waiting 3s for RPC state propagation...`);
+    await new Promise((r) => setTimeout(r, 3000));
+
     // ---- Step 2: Configure smart account targets ----
     const smartAccount = new Contract(
       smartAccountAddress,
@@ -268,10 +273,26 @@ registerAgentRouter.post("/setup", async (req: Request, res: Response) => {
       deployer,
     );
 
-    const n2 = allocateNonce();
+    // Retry setTargetAllowed — stale RPC nodes may not yet see the clone
+    let n2 = allocateNonce();
     console.log(`[register-agent/setup] Configuring targets... (nonce=${n2})`);
-    const allowGatewayTx = await smartAccount.setTargetAllowed(config.gatewayAddress, true, { nonce: n2 });
-    await allowGatewayTx.wait();
+    let allowGatewayTx;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        allowGatewayTx = await smartAccount.setTargetAllowed(config.gatewayAddress, true, { nonce: n2 });
+        const gwReceipt = await allowGatewayTx.wait();
+        if (gwReceipt.status === 1) break;
+        throw new Error("setTargetAllowed reverted");
+      } catch (err) {
+        if (attempt < 2) {
+          console.log(`[register-agent/setup] setTargetAllowed attempt ${attempt + 1} failed, retrying in 3s...`);
+          await new Promise((r) => setTimeout(r, 3000));
+          n2 = allocateNonce();
+        } else {
+          throw err;
+        }
+      }
+    }
 
     const n3 = allocateNonce();
     const allowUsdcTargetTx = await smartAccount.setTargetAllowed(config.usdcAddress, true, { nonce: n3 });
