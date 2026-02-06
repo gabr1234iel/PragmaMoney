@@ -1,0 +1,25 @@
+{
+  "name": "pragma-agent",
+  "version": "1.0.0",
+  "description": "PragmaMoney tools for AI agents — browse services, manage wallets, pay & call APIs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "pragma-agent": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "ethers": "^6.0.0",
+    "permissionless": "^0.2.57",
+    "viem": "^2.45.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.0.0"
+  },
+  "license": "MIT"
+}
