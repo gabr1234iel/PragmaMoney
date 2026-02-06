@@ -1,0 +1,21 @@
+{
+  "id": "pragma-agent",
+  "name": "pragma-agent",
+  "version": "1.0.0",
+  "description": "PragmaMoney tools for AI agents — register, pay, and call services on Base Sepolia",
+  "skills": ["skills/pragma-money"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "relayerUrl": {
+        "type": "string",
+        "description": "Proxy relayer URL (default: http://localhost:4402)"
+      },
+      "pimlicoApiKey": {
+        "type": "string",
+        "description": "Pimlico API key for UserOps"
+      }
+    }
+  }
+}

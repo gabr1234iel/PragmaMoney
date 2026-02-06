@@ -2,7 +2,7 @@
 
 import { Agent } from "@/types";
 import { formatAddress } from "@/lib/utils";
-import { Bot, Wallet, ExternalLink, User, Landmark } from "lucide-react";
+import { Bot, Wallet, ExternalLink, User, Landmark, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AgentCardProps {
@@ -12,6 +12,7 @@ interface AgentCardProps {
 
 export function AgentCard({ agent, onClick }: AgentCardProps) {
   const hasWallet = agent.walletAddress && agent.walletAddress !== "0x0000000000000000000000000000000000000000";
+  const hasPool = agent.poolAddress && agent.poolAddress !== "0x0000000000000000000000000000000000000000";
 
   let description = "";
   let x402Support = false;
@@ -80,10 +81,31 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
             #{agent.agentId.toString()}
           </p>
         </div>
-        <button className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-200 group-hover:scale-105">
-          <ExternalLink className="w-4 h-4" />
-          <span className="font-medium">View</span>
-        </button>
+        <div className="flex gap-2">
+          {hasPool ? (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); window.location.href = `/pool/${agent.poolAddress}`; }}
+                className="flex items-center space-x-1 px-3 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-200 text-sm"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="font-medium">View</span>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); window.location.href = `/pool/${agent.poolAddress}`; }}
+                className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 text-sm"
+              >
+                <DollarSign className="w-3.5 h-3.5" />
+                <span className="font-medium">Fund</span>
+              </button>
+            </>
+          ) : (
+            <button className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-200 group-hover:scale-105">
+              <ExternalLink className="w-4 h-4" />
+              <span className="font-medium">View</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

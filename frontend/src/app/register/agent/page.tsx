@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSignTypedData, usePublicClient } from "wagmi";
 import { pad, toHex, parseAbi, decodeEventLog, type Address } from "viem";
@@ -10,7 +11,7 @@ import {
   AGENT_ACCOUNT_FACTORY_ABI,
   AGENT_POOL_FACTORY_ADDRESS,
   AGENT_POOL_FACTORY_ABI,
-  MOCK_USDC_ADDRESS
+  USDC_ADDRESS
 } from "@/lib/contracts";
 import { parseUSDC, formatAddress } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -334,7 +335,7 @@ export default function RegisterAgentPage() {
           smartWalletAddress,
           {
             agentURI: agentURIJson,
-            asset: MOCK_USDC_ADDRESS,
+            asset: USDC_ADDRESS,
             name: poolConfig.poolName,
             symbol: poolConfig.poolSymbol,
             poolOwner: address,
@@ -443,7 +444,17 @@ export default function RegisterAgentPage() {
   }
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-12 relative">
+      {/* Floating Mascot 1 - Top Right */}
+      <div className="absolute top-32 right-8 pointer-events-none hidden xl:block rotate-6 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={75} height={75} />
+      </div>
+
+      {/* Floating Mascot 2 - Top Left */}
+      <div className="absolute top-64 left-6 pointer-events-none hidden xl:block -rotate-12 drop-shadow-lg">
+        <Image src="/picture.png" alt="" width={60} height={60} />
+      </div>
+
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-12 text-center">
