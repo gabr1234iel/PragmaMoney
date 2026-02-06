@@ -11,19 +11,24 @@ interface IAgentSmartAccount {
     event TokenAllowedUpdated(address indexed token, bool allowed);
     event Executed(address indexed dest, uint256 value, bytes func);
     event BatchExecuted(uint256 count);
+    event ActionsRootUpdated(bytes32 indexed oldRoot, bytes32 indexed newRoot);
 
     /// @notice Initialize the smart account (called once after clone deployment)
     /// @param owner_ The owner address (controls policy)
+    /// @param admin_ The admin address (controls allowlist root)
     /// @param operator_ The operator address (signs UserOps)
     /// @param agentId_ Unique identifier for the agent
     /// @param dailyLimit_ Maximum daily spending in USDC (6 decimals)
     /// @param expiresAt_ Unix timestamp when the account expires
+    /// @param actionsRoot_ Merkle root of allowed actions
     function initialize(
         address owner_,
+        address admin_,
         address operator_,
         bytes32 agentId_,
         uint256 dailyLimit_,
-        uint256 expiresAt_
+        uint256 expiresAt_,
+        bytes32 actionsRoot_
     ) external;
 
     /// @notice Execute a single call (only callable via EntryPoint)
@@ -79,4 +84,15 @@ interface IAgentSmartAccount {
     /// @param token The token address to check
     /// @return allowed Whether the token is allowed
     function isTokenAllowed(address token) external view returns (bool allowed);
+
+    /// @notice Update the merkle root for allowed actions (admin only)
+    /// @param newRoot New merkle root
+    function setActionsRoot(bytes32 newRoot) external;
+
+    /// @notice Get the admin address
+    function admin() external view returns (address);
+
+    /// @notice Get the current actions root
+    /// @return root The merkle root
+    function getActionsRoot() external view returns (bytes32 root);
 }

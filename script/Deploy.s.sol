@@ -62,9 +62,11 @@ contract Deploy is Script {
         console2.log("AgentSmartAccount implementation deployed at:", address(accountImpl));
 
         // 5. Deploy AgentAccountFactory
+        bytes32 actionsRoot = vm.envOr("ACTIONS_ROOT", bytes32(0));
         AgentAccountFactory factory = new AgentAccountFactory(
             address(accountImpl),
-            ENTRY_POINT
+            ENTRY_POINT,
+            actionsRoot
         );
         console2.log("AgentAccountFactory deployed at:", address(factory));
 

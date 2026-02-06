@@ -12,7 +12,11 @@ remappings = [
 ]
 optimizer = true
 optimizer_runs = 200
-fs_permissions = [{ access = "read", path = "./metadata" }]
+evm_version = "cancun"
+fs_permissions = [
+  { access = "read", path = "./metadata" },
+  { access = "read-write", path = "./test/fixtures" }
+]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 
