@@ -1,53 +1,89 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Test, console2} from "forge-std/Test.sol";
+import {BaseTest} from "./BaseTest.t.sol";
 import {x402Gateway} from "../src/x402/x402Gateway.sol";
 import {Ix402Gateway} from "../src/x402/interfaces/Ix402Gateway.sol";
 import {ServiceRegistry} from "../src/x402/ServiceRegistry.sol";
 import {IServiceRegistry} from "../src/x402/interfaces/IServiceRegistry.sol";
-import {MockERC20} from "./helpers/MockERC20.sol";
+import {AgentFactory} from "../src/Launchpad/AgentFactory.sol";
+import {AgentPool} from "../src/Launchpad/AgentPool.sol";
+import {ReputationReporter} from "../src/ERC-8004/ReputationReporter.sol";
+import {IIdentityRegistry} from "../src/interfaces/IIdentityRegistry.sol";
+import {IReputationRegistry} from "../src/interfaces/IReputationRegistry.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract x402GatewayTest is Test {
+contract x402GatewayTest is BaseTest {
     x402Gateway public gateway;
     ServiceRegistry public registry;
-    MockERC20 public usdc;
+    IIdentityRegistry public identityRegistry;
+    IReputationRegistry public reputationRegistry;
+    ReputationReporter public reporter;
+    AgentFactory public agentFactory;
+    AgentPool public pool;
 
-    address public registryOwner = makeAddr("registryOwner");
-    address public serviceOwner = makeAddr("serviceOwner");
-    address public payer = makeAddr("payer");
-    address public stranger = makeAddr("stranger");
+    address public registryOwner;
+    address public serviceOwner;
+    address public payer;
+    address public stranger;
 
     bytes32 public constant SERVICE_ID = keccak256("test-service-1");
     uint256 public constant PRICE_PER_CALL = 1000; // 0.001 USDC
     string public constant ENDPOINT = "https://api.example.com/v1";
+    uint256 public agentId;
 
     function setUp() public {
-        // Deploy USDC mock (6 decimals)
-        usdc = new MockERC20("USD Coin", "USDC", 6);
+        _startFork();
+        _setupUsdc();
 
-        // Deploy ServiceRegistry
-        registry = new ServiceRegistry(registryOwner);
+        registryOwner = deployer;
+        serviceOwner = agentOwner;
+        payer = alice;
+        stranger = bob;
 
-        // Deploy gateway
-        gateway = new x402Gateway(address(registry), address(usdc));
+        vm.startPrank(deployer);
+        identityRegistry = _deployIdentity();
+        reputationRegistry = _deployReputation(address(identityRegistry));
+        reporter = _deployReporter(address(reputationRegistry), address(identityRegistry));
+        agentFactory = new AgentFactory(IIdentityRegistry(address(identityRegistry)), deployer, deployer, deployer, address(reporter));
+        reporter.setAdmin(address(agentFactory));
+        vm.stopPrank();
 
-        // Set gateway as authorized on registry
+        vm.prank(agentOwner);
+        agentId = identityRegistry.register("file://metadata/agent-1.json");
+
+        AgentFactory.CreateParams memory p = AgentFactory.CreateParams({
+            agentURI: "file://metadata/agent-1.json",
+            asset: IERC20(address(usdc)),
+            name: "Agent Pool",
+            symbol: "APOOL",
+            poolOwner: deployer,
+            dailyCap: 100e6,
+            vestingDuration: 7 days,
+            metadataURI: "file://metadata/agent-1.json"
+        });
+
+        vm.prank(deployer);
+        address poolAddr = agentFactory.createAgentPool(agentId, agentOwner, p);
+        pool = AgentPool(poolAddr);
+
+        registry = new ServiceRegistry(registryOwner, address(identityRegistry), address(agentFactory));
+        gateway = new x402Gateway(address(registry), address(usdc), address(identityRegistry), address(agentFactory));
+
         vm.prank(registryOwner);
         registry.setGateway(address(gateway));
 
-        // Register a test service
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             "Test Service",
             PRICE_PER_CALL,
             ENDPOINT,
             IServiceRegistry.ServiceType.API
         );
 
-        // Mint USDC to payer and approve gateway
-        usdc.mint(payer, 1_000_000e6); // 1M USDC
+        deal(address(usdc), payer, 1_000_000e6);
         vm.prank(payer);
         usdc.approve(address(gateway), type(uint256).max);
     }
@@ -58,14 +94,18 @@ contract x402GatewayTest is Test {
         uint256 calls = 1;
         uint256 expectedTotal = PRICE_PER_CALL * calls;
         uint256 payerBalBefore = usdc.balanceOf(payer);
-        uint256 ownerBalBefore = usdc.balanceOf(serviceOwner);
+        uint256 poolBalBefore = usdc.balanceOf(address(pool));
+        uint256 agentBalBefore = usdc.balanceOf(serviceOwner);
 
         vm.prank(payer);
         bytes32 paymentId = gateway.payForService(SERVICE_ID, calls);
 
         // Verify USDC transfer
+        uint256 poolShare = (expectedTotal * 4000) / 10_000;
+        uint256 agentShare = expectedTotal - poolShare;
         assertEq(usdc.balanceOf(payer), payerBalBefore - expectedTotal);
-        assertEq(usdc.balanceOf(serviceOwner), ownerBalBefore + expectedTotal);
+        assertEq(usdc.balanceOf(address(pool)), poolBalBefore + poolShare);
+        assertEq(usdc.balanceOf(serviceOwner), agentBalBefore + agentShare);
 
         // Verify payment record
         Ix402Gateway.Payment memory payment = gateway.getPayment(paymentId);
@@ -225,7 +265,7 @@ contract x402GatewayTest is Test {
 
         // Ensure payer has enough
         if (total > usdc.balanceOf(payer)) {
-            usdc.mint(payer, total);
+            deal(address(usdc), payer, total);
         }
 
         vm.prank(payer);

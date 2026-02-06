@@ -148,8 +148,8 @@ contract AgentFactoryTest is BaseTest {
         assertTrue(pool1 != pool2);
     }
 
-    /// @notice getPoolsByAgentId returns pools created for the agentId
-    function test_getPoolsByAgentId_returnsCreatedPools() public {
+    /// @notice poolByAgentId returns the pool created for the agentId
+    function test_poolByAgentId_returnsCreatedPool() public {
         AgentFactory.CreateParams memory p = AgentFactory.CreateParams({
             agentURI: "file://metadata/agent-1.json",
             asset: IERC20(address(usdc)),
@@ -167,9 +167,8 @@ contract AgentFactoryTest is BaseTest {
         vm.prank(deployer);
         address pool1 = factory.createAgentPool(agentId, agentOwner, p);
 
-        address[] memory pools = factory.getPoolsByAgentId(agentId);
-        assertEq(pools.length, 1);
-        assertEq(pools[0], pool1);
+        address pool = factory.poolByAgentId(agentId);
+        assertEq(pool, pool1);
     }
 
     /// @notice agentCount returns the correct number of agents with pools

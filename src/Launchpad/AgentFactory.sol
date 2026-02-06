@@ -21,7 +21,6 @@ contract AgentFactory is Ownable, IERC721Receiver {
     address public admin;
 
     mapping(uint256 => address) public poolByAgentId;
-    mapping(uint256 => address[]) private _poolsByAgentId;
     uint256[] private _allAgentIds;
 
     struct CreateParams {
@@ -119,14 +118,8 @@ contract AgentFactory is Ownable, IERC721Receiver {
 
         poolByAgentId[agentId] = pool;
         _allAgentIds.push(agentId);
-        _poolsByAgentId[agentId].push(pool);
         IReputationReporter(reputationReporter).setReporter(agentAccount, true);
         emit AgentPoolCreated(agentAccount, agentId, pool);
-    }
-
-    /// @notice Returns all pools created for a given agent id.
-    function getPoolsByAgentId(uint256 agentId) external view returns (address[] memory) {
-        return _poolsByAgentId[agentId];
     }
 
     function agentCount() external view returns (uint256) {

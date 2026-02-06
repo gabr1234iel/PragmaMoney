@@ -13,6 +13,7 @@ interface IServiceRegistry {
     }
 
     struct Service {
+        uint256 agentId;
         address owner;
         string name;
         uint256 pricePerCall;
@@ -25,6 +26,7 @@ interface IServiceRegistry {
 
     event ServiceRegistered(
         bytes32 indexed serviceId,
+        uint256 indexed agentId,
         address indexed owner,
         string name,
         uint256 pricePerCall,
@@ -49,12 +51,14 @@ interface IServiceRegistry {
 
     /// @notice Register a new service
     /// @param serviceId Unique identifier for the service
+    /// @param agentId Agent identity id associated with this service
     /// @param name Human-readable name for the service
     /// @param pricePerCall Price in USDC (6 decimals) per API call
     /// @param endpoint The service endpoint URL
     /// @param serviceType The type of service
     function registerService(
         bytes32 serviceId,
+        uint256 agentId,
         string calldata name,
         uint256 pricePerCall,
         string calldata endpoint,
@@ -65,6 +69,11 @@ interface IServiceRegistry {
     /// @param serviceId The service identifier
     /// @return service The full Service struct
     function getService(bytes32 serviceId) external view returns (Service memory service);
+
+    /// @notice Get the agentId associated with a service
+    /// @param serviceId The service identifier
+    /// @return agentId The agent id linked to the service
+    function getAgentId(bytes32 serviceId) external view returns (uint256 agentId);
 
     /// @notice Update the price per call for a service
     /// @param serviceId The service identifier

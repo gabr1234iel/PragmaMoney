@@ -17,9 +17,12 @@ contract AgentSmartAccountTest is Test {
 
     // The canonical EntryPoint
     address public constant ENTRY_POINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    bytes32 public constant ACTIONS_ROOT = keccak256("default-actions-root");
 
     address public owner;
     uint256 public ownerKey;
+    address public admin;
+    uint256 public adminKey;
     address public operator;
     uint256 public operatorKey;
     address public stranger = makeAddr("stranger");
@@ -34,6 +37,7 @@ contract AgentSmartAccountTest is Test {
     function setUp() public {
         // Generate owner and operator keys
         (owner, ownerKey) = makeAddrAndKey("owner");
+        (admin, adminKey) = makeAddrAndKey("admin");
         (operator, operatorKey) = makeAddrAndKey("operator");
 
         // Deploy USDC mock
@@ -47,11 +51,12 @@ contract AgentSmartAccountTest is Test {
         implementation = new AgentSmartAccount();
 
         // Deploy factory
-        factory = new AgentAccountFactory(address(implementation), ENTRY_POINT);
+        factory = new AgentAccountFactory(address(implementation), ENTRY_POINT, ACTIONS_ROOT);
 
         // Create account via factory
         address accountAddr = factory.createAccount(
             owner,
+            admin,
             operator,
             AGENT_ID,
             DAILY_LIMIT,
@@ -83,6 +88,8 @@ contract AgentSmartAccountTest is Test {
         assertEq(account.owner(), owner);
         assertEq(account.operator(), operator);
         assertEq(account.agentId(), AGENT_ID);
+        assertEq(account.getActionsRoot(), ACTIONS_ROOT);
+        assertEq(account.admin(), admin);
 
         SpendingPolicyLib.Policy memory pol = account.getPolicy();
         assertEq(pol.dailyLimit, DAILY_LIMIT);
@@ -92,12 +99,12 @@ contract AgentSmartAccountTest is Test {
 
     function test_Initialize_CannotReinitialize() public {
         vm.expectRevert(); // Initializable: contract is already initialized
-        account.initialize(stranger, stranger, keccak256("x"), 1, 1);
+        account.initialize(stranger, stranger, stranger, keccak256("x"), 1, 1, ACTIONS_ROOT);
     }
 
     function test_Implementation_CannotBeInitialized() public {
         vm.expectRevert(); // Initializable: contract is already initialized
-        implementation.initialize(stranger, stranger, keccak256("x"), 1, 1);
+        implementation.initialize(stranger, stranger, stranger, keccak256("x"), 1, 1, ACTIONS_ROOT);
     }
 
     // ==================== Factory ====================
@@ -109,13 +116,14 @@ contract AgentSmartAccountTest is Test {
 
     function test_Factory_DuplicateReverts() public {
         vm.expectRevert(); // Clones: clone already deployed
-        factory.createAccount(owner, operator, AGENT_ID, DAILY_LIMIT, expiresAt);
+        factory.createAccount(owner, admin, operator, AGENT_ID, DAILY_LIMIT, expiresAt);
     }
 
     function test_Factory_DifferentAgentIdDifferentAddress() public {
         bytes32 newAgentId = keccak256("agent-2");
         address newAccount = factory.createAccount(
             owner,
+            admin,
             operator,
             newAgentId,
             DAILY_LIMIT,

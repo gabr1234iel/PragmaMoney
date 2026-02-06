@@ -44,11 +44,13 @@ contract Deploy is Script {
         console2.log("Deployer balance:", mockUSDC.balanceOf(deployer) / 10**6, "USDC");
 
         // 1. Deploy ServiceRegistry (deployer is the initial owner)
-        ServiceRegistry registry = new ServiceRegistry(deployer);
+        address identityRegistry = vm.envAddress("IDENTITY_REGISTRY_ADDRESS");
+        address agentFactory = vm.envAddress("AGENT_FACTORY_ADDRESS");
+        ServiceRegistry registry = new ServiceRegistry(deployer, identityRegistry, agentFactory);
         console2.log("ServiceRegistry deployed at:", address(registry));
 
-        // 2. Deploy x402Gateway
-        x402Gateway gateway = new x402Gateway(address(registry), USDC);
+        // 2. Deploy x402Gateway (requires IdentityRegistry + AgentFactory addresses)
+        x402Gateway gateway = new x402Gateway(address(registry), USDC, identityRegistry, agentFactory);
         console2.log("x402Gateway deployed at:", address(gateway));
 
         // 3. Set gateway as authorized caller on ServiceRegistry
@@ -60,9 +62,11 @@ contract Deploy is Script {
         console2.log("AgentSmartAccount implementation deployed at:", address(accountImpl));
 
         // 5. Deploy AgentAccountFactory
+        bytes32 actionsRoot = vm.envOr("ACTIONS_ROOT", bytes32(0));
         AgentAccountFactory factory = new AgentAccountFactory(
             address(accountImpl),
-            ENTRY_POINT
+            ENTRY_POINT,
+            actionsRoot
         );
         console2.log("AgentAccountFactory deployed at:", address(factory));
 
@@ -74,6 +78,8 @@ contract Deploy is Script {
         console2.log("MockUSDC:                 ", USDC);
         console2.log("ServiceRegistry:           ", address(registry));
         console2.log("x402Gateway:               ", address(gateway));
+        console2.log("IdentityRegistry:          ", identityRegistry);
+        console2.log("AgentFactory:              ", agentFactory);
         console2.log("AgentSmartAccount (impl):  ", address(accountImpl));
         console2.log("AgentAccountFactory:       ", address(factory));
         console2.log("EntryPoint:                ", ENTRY_POINT);
@@ -97,10 +103,12 @@ contract RedeployRegistryGateway is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // 1. Deploy new ServiceRegistry
-        ServiceRegistry registry = new ServiceRegistry(deployer);
+        address identityRegistry = vm.envAddress("IDENTITY_REGISTRY_ADDRESS");
+        address agentFactory = vm.envAddress("AGENT_FACTORY_ADDRESS");
+        ServiceRegistry registry = new ServiceRegistry(deployer, identityRegistry, agentFactory);
 
         // 2. Deploy new x402Gateway pointing to new registry
-        x402Gateway gateway = new x402Gateway(address(registry), MOCK_USDC);
+        x402Gateway gateway = new x402Gateway(address(registry), MOCK_USDC, identityRegistry, agentFactory);
 
         // 3. Authorize gateway on registry
         registry.setGateway(address(gateway));

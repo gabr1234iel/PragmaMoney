@@ -1,26 +1,73 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Test, console2} from "forge-std/Test.sol";
+import {BaseTest} from "./BaseTest.t.sol";
 import {ServiceRegistry} from "../src/x402/ServiceRegistry.sol";
 import {IServiceRegistry} from "../src/x402/interfaces/IServiceRegistry.sol";
+import {AgentFactory} from "../src/Launchpad/AgentFactory.sol";
+import {AgentPool} from "../src/Launchpad/AgentPool.sol";
+import {ReputationReporter} from "../src/ERC-8004/ReputationReporter.sol";
+import {IIdentityRegistry} from "../src/interfaces/IIdentityRegistry.sol";
+import {IReputationRegistry} from "../src/interfaces/IReputationRegistry.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract ServiceRegistryTest is Test {
+contract ServiceRegistryTest is BaseTest {
     ServiceRegistry public registry;
+    IIdentityRegistry public identityRegistry;
+    IReputationRegistry public reputationRegistry;
+    ReputationReporter public reporter;
+    AgentFactory public agentFactory;
+    AgentPool public pool;
 
-    address public registryOwner = makeAddr("registryOwner");
-    address public serviceOwner = makeAddr("serviceOwner");
-    address public gateway = makeAddr("gateway");
-    address public stranger = makeAddr("stranger");
-    address public recorder = makeAddr("recorder");
+    address public registryOwner;
+    address public serviceOwner;
+    address public gateway;
+    address public stranger;
+    address public recorder;
 
     bytes32 public constant SERVICE_ID = keccak256("test-service-1");
     uint256 public constant PRICE_PER_CALL = 1000; // 0.001 USDC (6 decimals)
     string public constant SERVICE_NAME = "Test Service";
     string public constant ENDPOINT = "https://api.example.com/v1";
+    uint256 public agentId;
 
     function setUp() public {
-        registry = new ServiceRegistry(registryOwner);
+        _startFork();
+        _setupUsdc();
+
+        registryOwner = deployer;
+        serviceOwner = agentOwner;
+        gateway = address(0xBEEF);
+        stranger = bob;
+        recorder = address(0xCAFE);
+
+        vm.startPrank(deployer);
+        identityRegistry = _deployIdentity();
+        reputationRegistry = _deployReputation(address(identityRegistry));
+        reporter = _deployReporter(address(reputationRegistry), address(identityRegistry));
+        agentFactory = new AgentFactory(IIdentityRegistry(address(identityRegistry)), deployer, deployer, deployer, address(reporter));
+        reporter.setAdmin(address(agentFactory));
+        vm.stopPrank();
+
+        vm.prank(agentOwner);
+        agentId = identityRegistry.register("file://metadata/agent-1.json");
+
+        AgentFactory.CreateParams memory p = AgentFactory.CreateParams({
+            agentURI: "file://metadata/agent-1.json",
+            asset: IERC20(address(usdc)),
+            name: "Agent Pool",
+            symbol: "APOOL",
+            poolOwner: deployer,
+            dailyCap: 100e6,
+            vestingDuration: 7 days,
+            metadataURI: "file://metadata/agent-1.json"
+        });
+
+        vm.prank(deployer);
+        address poolAddr = agentFactory.createAgentPool(agentId, agentOwner, p);
+        pool = AgentPool(poolAddr);
+
+        registry = new ServiceRegistry(registryOwner, address(identityRegistry), address(agentFactory));
 
         vm.prank(registryOwner);
         registry.setGateway(gateway);
@@ -34,6 +81,7 @@ contract ServiceRegistryTest is Test {
         vm.expectEmit(true, true, false, true);
         emit IServiceRegistry.ServiceRegistered(
             SERVICE_ID,
+            agentId,
             serviceOwner,
             SERVICE_NAME,
             PRICE_PER_CALL,
@@ -42,6 +90,7 @@ contract ServiceRegistryTest is Test {
 
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -77,7 +126,7 @@ contract ServiceRegistryTest is Test {
 
         for (uint256 i = 0; i < 5; i++) {
             vm.prank(serviceOwner);
-            registry.registerService(ids[i], SERVICE_NAME, PRICE_PER_CALL, ENDPOINT, types[i]);
+            registry.registerService(ids[i], agentId, SERVICE_NAME, PRICE_PER_CALL, ENDPOINT, types[i]);
 
             IServiceRegistry.Service memory svc = registry.getService(ids[i]);
             assertEq(uint256(svc.serviceType), uint256(types[i]));
@@ -88,6 +137,7 @@ contract ServiceRegistryTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -100,6 +150,7 @@ contract ServiceRegistryTest is Test {
         );
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -112,6 +163,7 @@ contract ServiceRegistryTest is Test {
         vm.expectRevert(ServiceRegistry.ZeroPricePerCall.selector);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             0,
             ENDPOINT,
@@ -124,6 +176,7 @@ contract ServiceRegistryTest is Test {
         vm.expectRevert(ServiceRegistry.EmptyEndpoint.selector);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             "",
@@ -136,6 +189,7 @@ contract ServiceRegistryTest is Test {
         vm.expectRevert(ServiceRegistry.EmptyName.selector);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             "",
             PRICE_PER_CALL,
             ENDPOINT,
@@ -159,6 +213,7 @@ contract ServiceRegistryTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -181,6 +236,7 @@ contract ServiceRegistryTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -200,6 +256,7 @@ contract ServiceRegistryTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -217,6 +274,7 @@ contract ServiceRegistryTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -237,6 +295,7 @@ contract ServiceRegistryTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -258,6 +317,7 @@ contract ServiceRegistryTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -282,6 +342,7 @@ contract ServiceRegistryTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -303,6 +364,7 @@ contract ServiceRegistryTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -334,6 +396,7 @@ contract ServiceRegistryTest is Test {
 
         registry.registerService(
             keccak256("svc-1"),
+            agentId,
             "Service One",
             PRICE_PER_CALL,
             ENDPOINT,
@@ -343,6 +406,7 @@ contract ServiceRegistryTest is Test {
 
         registry.registerService(
             keccak256("svc-2"),
+            agentId,
             "Service Two",
             PRICE_PER_CALL,
             ENDPOINT,
@@ -352,6 +416,7 @@ contract ServiceRegistryTest is Test {
 
         registry.registerService(
             keccak256("svc-3"),
+            agentId,
             "Service Three",
             PRICE_PER_CALL,
             ENDPOINT,
@@ -367,8 +432,8 @@ contract ServiceRegistryTest is Test {
         bytes32 id2 = keccak256("svc-2");
 
         vm.startPrank(serviceOwner);
-        registry.registerService(id1, "Service 1", PRICE_PER_CALL, ENDPOINT, IServiceRegistry.ServiceType.API);
-        registry.registerService(id2, "Service 2", PRICE_PER_CALL, ENDPOINT, IServiceRegistry.ServiceType.STORAGE);
+        registry.registerService(id1, agentId, "Service 1", PRICE_PER_CALL, ENDPOINT, IServiceRegistry.ServiceType.API);
+        registry.registerService(id2, agentId, "Service 2", PRICE_PER_CALL, ENDPOINT, IServiceRegistry.ServiceType.STORAGE);
         vm.stopPrank();
 
         assertEq(registry.getServiceIdAt(0), id1);
@@ -433,6 +498,7 @@ contract ServiceRegistryTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
@@ -459,6 +525,7 @@ contract ServiceRegistryTest is Test {
         vm.prank(serviceOwner);
         registry.registerService(
             SERVICE_ID,
+            agentId,
             SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,

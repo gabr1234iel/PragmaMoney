@@ -34,10 +34,10 @@ const USDC_ABI = [
 ];
 
 const SERVICE_REGISTRY_ABI = [
-  "function registerService(bytes32 serviceId, uint256 pricePerCall, string memory endpoint, uint8 serviceType) external",
-  "function getService(bytes32 serviceId) view returns (tuple(address owner, uint256 pricePerCall, string endpoint, uint8 serviceType, bool active, uint256 totalCalls, uint256 totalRevenue) service)",
+  "function registerService(bytes32 serviceId, uint256 agentId, string memory name, uint256 pricePerCall, string memory endpoint, uint8 serviceType) external",
+  "function getService(bytes32 serviceId) view returns (tuple(uint256 agentId, address owner, string name, uint256 pricePerCall, string endpoint, uint8 serviceType, bool active, uint256 totalCalls, uint256 totalRevenue) service)",
   "function getServiceCount() view returns (uint256)",
-  "event ServiceRegistered(bytes32 indexed serviceId, address indexed owner, uint256 pricePerCall, uint8 serviceType)",
+  "event ServiceRegistered(bytes32 indexed serviceId, uint256 indexed agentId, address indexed owner, string name, uint256 pricePerCall, uint8 serviceType)",
 ];
 
 // ServiceType enum values (matches IServiceRegistry.ServiceType)
@@ -154,13 +154,15 @@ async function main() {
     const serviceResult = await registry.getService(serviceId);
     // Handle both tuple (array) and object return values
     service = Array.isArray(serviceResult) ? {
-      owner: serviceResult[0],
-      pricePerCall: serviceResult[1],
-      endpoint: serviceResult[2],
-      serviceType: serviceResult[3],
-      active: serviceResult[4],
-      totalCalls: serviceResult[5],
-      totalRevenue: serviceResult[6],
+      agentId: serviceResult[0],
+      owner: serviceResult[1],
+      name: serviceResult[2],
+      pricePerCall: serviceResult[3],
+      endpoint: serviceResult[4],
+      serviceType: serviceResult[5],
+      active: serviceResult[6],
+      totalCalls: serviceResult[7],
+      totalRevenue: serviceResult[8],
     } : serviceResult;
     
     console.log(`  ✓ Service exists: ${ethers.hexlify(serviceId)}`);
@@ -185,6 +187,8 @@ async function main() {
       
       // Register the service
       // Price: 0.001 USDC (1000 in 6 decimals)
+      const agentId = 1;
+      const serviceName = "Test Service";
       const pricePerCall = ethers.parseUnits("0.001", decimals);
       const endpoint = "https://httpbin.org/get";
       const serviceType = ServiceType.API; // API = 2
@@ -196,6 +200,8 @@ async function main() {
       try {
         const registerTx = await registry.registerService(
           serviceId,
+          agentId,
+          serviceName,
           pricePerCall,
           endpoint,
           serviceType
@@ -210,7 +216,9 @@ async function main() {
         // Get the newly registered service
         service = await registry.getService(serviceId);
         console.log(`  Service details:`);
+        console.log(`    Agent ID: ${service.agentId}`);
         console.log(`    Owner: ${service.owner}`);
+        console.log(`    Name: ${service.name}`);
         console.log(`    Price: ${ethers.formatUnits(service.pricePerCall, decimals)} USDC`);
         console.log(`    Active: ${service.active}\n`);
       } catch (registerError: any) {
@@ -226,13 +234,15 @@ async function main() {
               const serviceResult = await registry.getService(serviceId);
               // Handle both tuple and individual return values
               service = Array.isArray(serviceResult) ? {
-                owner: serviceResult[0],
-                pricePerCall: serviceResult[1],
-                endpoint: serviceResult[2],
-                serviceType: serviceResult[3],
-                active: serviceResult[4],
-                totalCalls: serviceResult[5],
-                totalRevenue: serviceResult[6],
+                agentId: serviceResult[0],
+                owner: serviceResult[1],
+                name: serviceResult[2],
+                pricePerCall: serviceResult[3],
+                endpoint: serviceResult[4],
+                serviceType: serviceResult[5],
+                active: serviceResult[6],
+                totalCalls: serviceResult[7],
+                totalRevenue: serviceResult[8],
               } : serviceResult;
               
               console.log(`  ✓ Service found:`);
@@ -259,13 +269,15 @@ async function main() {
           const serviceResult = await registry.getService(serviceId);
           // Handle both tuple (array) and object return values
           service = Array.isArray(serviceResult) ? {
-            owner: serviceResult[0],
-            pricePerCall: serviceResult[1],
-            endpoint: serviceResult[2],
-            serviceType: serviceResult[3],
-            active: serviceResult[4],
-            totalCalls: serviceResult[5],
-            totalRevenue: serviceResult[6],
+            agentId: serviceResult[0],
+            owner: serviceResult[1],
+            name: serviceResult[2],
+            pricePerCall: serviceResult[3],
+            endpoint: serviceResult[4],
+            serviceType: serviceResult[5],
+            active: serviceResult[6],
+            totalCalls: serviceResult[7],
+            totalRevenue: serviceResult[8],
           } : serviceResult;
           
           console.log(`  ✓ Service found:`);
