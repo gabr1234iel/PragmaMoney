@@ -300,9 +300,13 @@ registerAgentRouter.post("/setup", async (req: Request, res: Response) => {
 
     const n4 = allocateNonce();
     const allowUsdcTokenTx = await smartAccount.setTokenAllowed(config.usdcAddress, true, { nonce: n4 });
-    const allowTokenReceipt = await allowUsdcTokenTx.wait();
-    txHashes.setTargets = allowTokenReceipt.hash;
-    console.log(`[register-agent/setup] setTargets done`);
+    await allowUsdcTokenTx.wait();
+
+    const n5 = allocateNonce();
+    const allowRegistryTx = await smartAccount.setTargetAllowed(config.serviceRegistryAddress, true, { nonce: n5 });
+    const allowRegistryReceipt = await allowRegistryTx.wait();
+    txHashes.setTargets = allowRegistryReceipt.hash;
+    console.log(`[register-agent/setup] setTargets done (gateway, USDC, ServiceRegistry)`);
 
     // Store smart account address for /finalize phase
     pending.smartAccountAddress = smartAccountAddress;

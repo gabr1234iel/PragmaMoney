@@ -3,8 +3,8 @@ import { Address } from "viem";
 // Contract addresses on Base Sepolia (deployed)
 // Real USDC — required by x402 facilitator (EIP-3009 support)
 export const USDC_ADDRESS: Address = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
-export const GATEWAY_ADDRESS: Address = "0xf5683155F413A74ac16E1282e29b6a913cb6903F";
-export const SERVICE_REGISTRY_ADDRESS: Address = "0x3bF572E49043E723Eb4b74C7081218597716a721";
+export const GATEWAY_ADDRESS: Address = "0xB2278aC78fB4EF96843Eb13D695B31b5Eb340231";
+export const SERVICE_REGISTRY_ADDRESS: Address = "0xC4820b30d60037DC2cdBeec46462eFcb8c08aCF0";
 export const AGENT_FACTORY_ADDRESS: Address = "0x1768632c7d4A5f84A0Dd62b7f7c691E90d7EBf94";
 
 // AgentFactory (Launchpad pool factory) — deployed by DeployAgentFactory script

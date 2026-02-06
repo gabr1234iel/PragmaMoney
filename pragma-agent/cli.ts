@@ -7,7 +7,7 @@
  *   pragma-agent register --name "X" --endpoint "https://..." --daily-limit 100 --expiry-days 90 --pool-daily-cap 50
  *   pragma-agent wallet [balance|address|policy]
  *   pragma-agent services [list|get --service-id 0x...|search --query "keyword"]
- *   pragma-agent pool [info|remaining|pull --amount 5.00]
+ *   pragma-agent pool [info|remaining|pull --amount 5.00|invest --target-agent-id 42 --amount 1.00]
  *   pragma-agent pay [pay --service-id 0x... --calls 1|verify --payment-id 0x...]
  *   pragma-agent call --service-id 0x... [--method POST] [--body '{"key":"val"}']
  */
@@ -57,8 +57,8 @@ async function main(): Promise<void> {
 Commands:
   register   Register agent: identity NFT, smart wallet, pool
   wallet     Manage wallet: balance, address, policy
-  services   Browse ServiceRegistry: list, get, search
-  pool       AgentPool: info, remaining, pull
+  services   Browse/register services: list, get, search, register
+  pool       AgentPool: info, remaining, pull, invest
   pay        Pay for services: pay, verify
   call       One-step pay + HTTP call
 
@@ -68,8 +68,10 @@ Examples:
   pragma-agent wallet policy
   pragma-agent services list
   pragma-agent services get --service-id 0x...
+  pragma-agent services register --name "My API" --price 0.001 --endpoint "https://api.example.com" --type API
   pragma-agent pool remaining
   pragma-agent pool pull --amount 5.00
+  pragma-agent pool invest --target-agent-id 42 --amount 1.00
   pragma-agent pay pay --service-id 0x... --calls 1
   pragma-agent pay verify --payment-id 0x...
   pragma-agent call --service-id 0x... --method POST --body '{"key":"val"}'
@@ -146,9 +148,9 @@ Environment:
 
     case "services": {
       const action = (subcommand ?? "list") as ServicesInput["action"];
-      if (!["list", "get", "search"].includes(action)) {
+      if (!["list", "get", "search", "register"].includes(action)) {
         console.error(JSON.stringify({
-          error: `Unknown services action: ${action}. Valid: list, get, search`,
+          error: `Unknown services action: ${action}. Valid: list, get, search, register`,
         }));
         process.exit(1);
       }
@@ -157,6 +159,11 @@ Environment:
         action,
         ...(getFlag(args, "service-id") !== undefined && { serviceId: getFlag(args, "service-id") }),
         ...(getFlag(args, "query") !== undefined && { query: getFlag(args, "query") }),
+        ...(getFlag(args, "name") !== undefined && { name: getFlag(args, "name") }),
+        ...(getFlag(args, "price") !== undefined && { pricePerCall: getFlag(args, "price") }),
+        ...(getFlag(args, "endpoint") !== undefined && { endpoint: getFlag(args, "endpoint") }),
+        ...(getFlag(args, "type") !== undefined && { serviceType: getFlag(args, "type") }),
+        ...(getFlag(args, "relayer-url") !== undefined && { relayerUrl: getFlag(args, "relayer-url") }),
         ...(getFlag(args, "rpc-url") !== undefined && { rpcUrl: getFlag(args, "rpc-url") }),
       };
       result = await handleServices(input);
@@ -165,9 +172,9 @@ Environment:
 
     case "pool": {
       const action = (subcommand ?? "info") as PoolInput["action"];
-      if (!["pull", "remaining", "info"].includes(action)) {
+      if (!["pull", "remaining", "info", "invest"].includes(action)) {
         console.error(JSON.stringify({
-          error: `Unknown pool action: ${action}. Valid: pull, remaining, info`,
+          error: `Unknown pool action: ${action}. Valid: pull, remaining, info, invest`,
         }));
         process.exit(1);
       }
@@ -176,6 +183,8 @@ Environment:
         action,
         ...(getFlag(args, "pool-address") !== undefined && { poolAddress: getFlag(args, "pool-address") }),
         ...(getFlag(args, "amount") !== undefined && { amount: getFlag(args, "amount") }),
+        ...(getFlag(args, "target-agent-id") !== undefined && { targetAgentId: getFlag(args, "target-agent-id") }),
+        ...(getFlag(args, "relayer-url") !== undefined && { relayerUrl: getFlag(args, "relayer-url") }),
         ...(getFlag(args, "rpc-url") !== undefined && { rpcUrl: getFlag(args, "rpc-url") }),
       };
       result = await handlePool(input);

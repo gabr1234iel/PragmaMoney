@@ -5,8 +5,8 @@ export const RPC_URL = "https://sepolia.base.org";
 export const DEFAULT_PROXY_URL = "http://localhost:4402";
 
 export const USDC_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
-export const SERVICE_REGISTRY_ADDRESS = "0x3bF572E49043E723Eb4b74C7081218597716a721";
-export const X402_GATEWAY_ADDRESS = "0xf5683155F413A74ac16E1282e29b6a913cb6903F";
+export const SERVICE_REGISTRY_ADDRESS = "0xC4820b30d60037DC2cdBeec46462eFcb8c08aCF0";
+export const X402_GATEWAY_ADDRESS = "0xB2278aC78fB4EF96843Eb13D695B31b5Eb340231";
 export const IDENTITY_REGISTRY_ADDRESS = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 export const AGENT_ACCOUNT_FACTORY_ADDRESS = "0x1768632c7d4A5f84A0Dd62b7f7c691E90d7EBf94";
 export const AGENT_POOL_FACTORY_ADDRESS = "0xcB016c9DC6c9bE4D6AaE84405B2686569F9cEc05";
@@ -79,6 +79,8 @@ export const AGENT_SMART_ACCOUNT_ABI = [
 export const AGENT_POOL_ABI = [
   // Agent pull
   "function pull(address to, uint256 assets)",
+  // ERC-4626 deposit
+  "function deposit(uint256 assets, address receiver) returns (uint256 shares)",
   // View functions
   "function remainingCapToday() view returns (uint256)",
   "function totalAssets() view returns (uint256)",
@@ -116,4 +118,9 @@ export const IDENTITY_REGISTRY_ABI = [
 export const AGENT_ACCOUNT_FACTORY_ABI = [
   "function createAccount(address owner, address operator, bytes32 agentId, uint256 dailyLimit, uint256 expiresAt) returns (address)",
   "function getAddress(address owner, bytes32 agentId) view returns (address)",
+] as const;
+
+export const AGENT_POOL_FACTORY_ABI = [
+  "function poolByAgentId(uint256 agentId) view returns (address)",
+  "function agentCount() view returns (uint256)",
 ] as const;

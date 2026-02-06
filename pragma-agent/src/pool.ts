@@ -1,22 +1,31 @@
 import { JsonRpcProvider, Contract, formatUnits, parseUnits } from "ethers";
 import {
   RPC_URL,
+  USDC_ADDRESS,
   USDC_DECIMALS,
   AGENT_POOL_ABI,
+  ERC20_ABI,
+  AGENT_POOL_FACTORY_ADDRESS,
+  AGENT_POOL_FACTORY_ABI,
+  RELAYER_URL,
 } from "./config.js";
 import { loadOrCreateWallet, requireRegistration, getRegistration } from "./wallet.js";
-import { sendUserOp, buildPoolPullCall } from "./userop.js";
+import { sendUserOp, buildPoolPullCall, buildApproveCall, buildPoolDepositCall } from "./userop.js";
 
 // ─── Tool handler ────────────────────────────────────────────────────────────
 
 export interface PoolInput {
-  action: "pull" | "remaining" | "info";
+  action: "pull" | "remaining" | "info" | "invest";
   /** Address of the AgentPool contract. Optional if agent is registered (uses registration poolAddress). */
   poolAddress?: string;
   /** Recipient address for 'pull'. Defaults to the agent's smart account address. */
   to?: string;
-  /** Amount of USDC to pull (human-readable, e.g. "10.5"). Required for 'pull'. */
+  /** Amount of USDC to pull/invest (human-readable, e.g. "10.5"). Required for 'pull' and 'invest'. */
   amount?: string;
+  /** Target agent ID for 'invest'. Deposits into that agent's pool. */
+  targetAgentId?: string;
+  /** Optional: override relayer URL */
+  relayerUrl?: string;
   /** Optional: override RPC URL */
   rpcUrl?: string;
 }
@@ -175,9 +184,121 @@ export async function handlePool(input: PoolInput): Promise<string> {
         });
       }
 
+      case "invest": {
+        if (!input.amount) {
+          return JSON.stringify({
+            error: "amount is required for 'invest' action (USDC amount, e.g. '1.0').",
+          });
+        }
+        if (!input.targetAgentId) {
+          return JSON.stringify({
+            error: "targetAgentId is required for 'invest' action.",
+          });
+        }
+
+        // Get registration (smart account) and wallet (operator private key)
+        const registration = requireRegistration();
+        const walletData = loadOrCreateWallet();
+        const relayerUrl = input.relayerUrl ?? RELAYER_URL;
+
+        // Look up target pool via AgentFactory.poolByAgentId on-chain
+        const provider = new JsonRpcProvider(rpcUrl);
+        const agentFactory = new Contract(
+          AGENT_POOL_FACTORY_ADDRESS,
+          AGENT_POOL_FACTORY_ABI,
+          provider,
+        );
+
+        const targetPoolAddress: string = await agentFactory.poolByAgentId(
+          BigInt(input.targetAgentId),
+        );
+
+        if (!targetPoolAddress || targetPoolAddress === "0x0000000000000000000000000000000000000000") {
+          return JSON.stringify({
+            error: `No pool found for agentId ${input.targetAgentId}. Agent may not have created a pool yet.`,
+          });
+        }
+
+        // Request deployer to allow target pool on our smart account (transparent)
+        try {
+          const allowRes = await fetch(`${relayerUrl}/allow-target`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              operatorAddress: walletData.address,
+              agentId: registration.agentId,
+              targetAddress: targetPoolAddress,
+            }),
+          });
+          if (!allowRes.ok) {
+            const err = await allowRes.json() as { error?: string; details?: string };
+            return JSON.stringify({
+              error: `Failed to allow target pool: ${err.error ?? allowRes.statusText}`,
+              details: err.details,
+            });
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return JSON.stringify({
+            error: `Failed to reach relayer for target approval: ${msg}`,
+          });
+        }
+
+        const assets = parseUnits(input.amount, USDC_DECIMALS);
+
+        // Check smart account USDC balance
+        const usdc = new Contract(USDC_ADDRESS, ERC20_ABI, provider);
+        const balance: bigint = await usdc.balanceOf(registration.smartAccount);
+        if (balance < assets) {
+          return JSON.stringify({
+            error: `Insufficient USDC balance. Need ${input.amount} USDC but smart account has ${formatUnits(balance, USDC_DECIMALS)} USDC.`,
+            required: input.amount,
+            available: formatUnits(balance, USDC_DECIMALS),
+          });
+        }
+
+        // Send UserOp batch: approve USDC on target pool + pool.deposit(assets, smartAccount)
+        const result = await sendUserOp(
+          registration.smartAccount as `0x${string}`,
+          walletData.privateKey as `0x${string}`,
+          [
+            buildApproveCall(
+              USDC_ADDRESS as `0x${string}`,
+              targetPoolAddress as `0x${string}`,
+              assets,
+            ),
+            buildPoolDepositCall(
+              targetPoolAddress as `0x${string}`,
+              assets,
+              registration.smartAccount as `0x${string}`,
+            ),
+          ],
+          { skipSponsorship: true },
+        );
+
+        if (!result.success) {
+          return JSON.stringify({
+            error: "UserOp failed on-chain.",
+            txHash: result.txHash,
+            userOpHash: result.userOpHash,
+          });
+        }
+
+        return JSON.stringify({
+          success: true,
+          action: "invest",
+          targetAgentId: input.targetAgentId,
+          targetPoolAddress,
+          amount: input.amount,
+          amountRaw: assets.toString(),
+          txHash: result.txHash,
+          userOpHash: result.userOpHash,
+        });
+      }
+
       default:
         return JSON.stringify({
-          error: `Unknown action: ${input.action}. Valid actions: pull, remaining, info`,
+          error: `Unknown action: ${input.action}. Valid actions: pull, remaining, info, invest`,
         });
     }
   } catch (err: unknown) {
@@ -191,13 +312,13 @@ export async function handlePool(input: PoolInput): Promise<string> {
 export const poolSchema = {
   name: "pragma-pool",
   description:
-    "Interact with a PragmaMoney AgentPool (ERC-4626 vault) via 4337 UserOperations. Pull USDC from the pool into the smart account, check remaining daily cap, or get pool metadata.",
+    "Interact with a PragmaMoney AgentPool (ERC-4626 vault) via 4337 UserOperations. Pull USDC from the pool into the smart account, invest USDC into another agent's pool, check remaining daily cap, or get pool metadata.",
   input_schema: {
     type: "object" as const,
     properties: {
       action: {
         type: "string" as const,
-        enum: ["pull", "remaining", "info"],
+        enum: ["pull", "remaining", "info", "invest"],
         description: "The pool action to perform.",
       },
       poolAddress: {
@@ -213,7 +334,16 @@ export const poolSchema = {
       amount: {
         type: "string" as const,
         description:
-          "Amount of USDC to pull (human-readable, e.g. '10.5'). Required for 'pull' action.",
+          "Amount of USDC (human-readable, e.g. '10.5'). Required for 'pull' and 'invest' actions.",
+      },
+      targetAgentId: {
+        type: "string" as const,
+        description:
+          "Agent ID whose pool to invest in. Required for 'invest' action.",
+      },
+      relayerUrl: {
+        type: "string" as const,
+        description: "Override the default proxy relayer URL.",
       },
       rpcUrl: {
         type: "string" as const,

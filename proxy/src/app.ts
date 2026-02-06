@@ -13,6 +13,8 @@ import { forwardRequest } from "./services/proxyForward.js";
 import type { ServiceType } from "./types/x402.js";
 import { registerAgentRouter } from "./routes/registerAgent.js";
 import { fundAgentRouter } from "./routes/fundAgent.js";
+import { registerServiceRouter } from "./routes/registerService.js";
+import { allowTargetRouter } from "./routes/allowTarget.js";
 
 // ---------------------------------------------------------------------------
 // Express App
@@ -125,6 +127,12 @@ app.use("/register-agent", registerAgentRouter);
 
 // Standalone ETH faucet for already-registered agents
 app.use("/fund-agent", fundAgentRouter);
+
+// Service registration (public — on-chain existence is auth)
+app.use("/register-service", registerServiceRouter);
+
+// Generic target approval for smart accounts (used by pool invest, etc.)
+app.use("/allow-target", allowTargetRouter);
 
 // ---------------------------------------------------------------------------
 // Proxy Routes (payment-gated)

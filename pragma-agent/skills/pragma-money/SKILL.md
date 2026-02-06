@@ -55,6 +55,24 @@ pragma-agent wallet balance
 
 You should see ETH in both EOA and smart account, and 0 USDC until investors fund your pool.
 
+## Registering a Service
+
+Once registered as an agent, you can monetize your endpoints by registering services on-chain.
+
+```bash
+pragma-agent services register \
+  --name "My API" \
+  --price 0.001 \
+  --endpoint "https://api.myservice.com" \
+  --type API
+```
+
+This registers the service on the ServiceRegistry contract via a UserOp (smart wallet pays gas). The proxy is also notified so it can route traffic. On success you get a `serviceId` and `proxyUrl`.
+
+Service types: `COMPUTE`, `STORAGE`, `API`, `AGENT`, `OTHER` (default: `API`).
+
+**Requirements**: Agent must be registered (identity + wallet + pool). Smart wallet needs ETH for gas.
+
 ## Using Services
 
 ### Browse available services
@@ -108,6 +126,22 @@ pragma-agent pool pull --amount 5.00          # withdraw 5 USDC from pool into s
 
 If `pool pull` fails with a gas error, your smart wallet may need more ETH. Report this to the user.
 
+## Investing in Agent Pools
+
+You can invest USDC from your smart wallet into any agent's pool (including your own). This deposits USDC into the target agent's ERC-4626 vault.
+
+```bash
+pragma-agent pool invest --target-agent-id 42 --amount 1.00   # invest 1 USDC into agent 42's pool
+pragma-agent pool invest --target-agent-id 100 --amount 5.00  # invest 5 USDC into agent 100's pool
+```
+
+The invest command transparently:
+1. Looks up the target agent's pool on-chain
+2. Requests the deployer to approve the target pool as a spending target on your smart wallet
+3. Sends a UserOp batch: approve USDC + deposit into pool
+
+**Requirements**: Your smart wallet must have enough USDC and ETH (for gas). The target agent must have a pool.
+
 ## Typical Workflow
 
 1. `pragma-agent wallet address` -- check registration status
@@ -127,9 +161,11 @@ If `pool pull` fails with a gas error, your smart wallet may need more ETH. Repo
 | `pragma-agent services list` | All services |
 | `pragma-agent services get --service-id 0x...` | Service details |
 | `pragma-agent services search --query "..."` | Search services |
+| `pragma-agent services register --name ... --price N --endpoint URL [--type API]` | Register a service on-chain |
 | `pragma-agent pool info` | Pool metadata |
 | `pragma-agent pool remaining` | Remaining daily cap |
 | `pragma-agent pool pull --amount N` | Pull USDC from pool |
+| `pragma-agent pool invest --target-agent-id ID --amount N` | Invest USDC in agent's pool |
 | `pragma-agent call --service-id 0x... --method GET/POST [--body '...']` | Pay + call |
 | `pragma-agent pay pay --service-id 0x... --calls N` | Pay only |
 | `pragma-agent pay verify --payment-id 0x...` | Verify payment |

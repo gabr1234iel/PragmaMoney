@@ -47,6 +47,7 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
     error AgentNotRegistered(uint256 agentId);
     error AgentWalletNotSet(uint256 agentId);
     error AgentPoolNotFound(uint256 agentId);
+    error NotAgentOwnerOrWallet(uint256 agentId, address caller);
 
     // -- Events --
 
@@ -122,6 +123,11 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
             revert AgentPoolNotFound(agentId);
         }
 
+        address nftOwner = identityRegistry.ownerOf(agentId);
+        if (msg.sender != nftOwner && msg.sender != agentWallet) {
+            revert NotAgentOwnerOrWallet(agentId, msg.sender);
+        }
+
         if (_services[serviceId].owner != address(0)) {
             revert ServiceAlreadyRegistered(serviceId);
         }
@@ -137,7 +143,7 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
 
         _services[serviceId] = Service({
             agentId: agentId,
-            owner: msg.sender,
+            owner: agentWallet,
             name: name,
             pricePerCall: pricePerCall,
             endpoint: endpoint,
@@ -151,7 +157,7 @@ contract ServiceRegistry is IServiceRegistry, Ownable {
 
         _serviceIds.push(serviceId);
 
-        emit ServiceRegistered(serviceId, agentId, msg.sender, name, pricePerCall, serviceType);
+        emit ServiceRegistered(serviceId, agentId, agentWallet, name, pricePerCall, serviceType);
     }
 
     /// @inheritdoc IServiceRegistry

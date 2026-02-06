@@ -24,6 +24,7 @@ import {
   PIMLICO_BUNDLER_URL,
   RPC_URL,
   X402_GATEWAY_ADDRESS,
+  SERVICE_REGISTRY_ADDRESS,
 } from "./config.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -94,6 +95,33 @@ const POOL_ABI_VIEM = [
       { name: "assets", type: "uint256" },
     ],
     name: "pull",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "assets", type: "uint256" },
+      { name: "receiver", type: "address" },
+    ],
+    name: "deposit",
+    outputs: [{ name: "shares", type: "uint256" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
+const SERVICE_REGISTRY_ABI_VIEM = [
+  {
+    inputs: [
+      { name: "serviceId", type: "bytes32" },
+      { name: "agentId", type: "uint256" },
+      { name: "name", type: "string" },
+      { name: "pricePerCall", type: "uint256" },
+      { name: "endpoint", type: "string" },
+      { name: "serviceType", type: "uint8" },
+    ],
+    name: "registerService",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -496,6 +524,47 @@ export function buildPoolPullCall(
       abi: POOL_ABI_VIEM,
       functionName: "pull",
       args: [to, amount],
+    }),
+  };
+}
+
+/**
+ * Build a ServiceRegistry.registerService call.
+ */
+export function buildRegisterServiceCall(
+  serviceId: `0x${string}`,
+  agentId: bigint,
+  name: string,
+  pricePerCall: bigint,
+  endpoint: string,
+  serviceType: number
+): Call {
+  return {
+    to: SERVICE_REGISTRY_ADDRESS as `0x${string}`,
+    value: 0n,
+    data: encodeFunctionData({
+      abi: SERVICE_REGISTRY_ABI_VIEM,
+      functionName: "registerService",
+      args: [serviceId, agentId, name, pricePerCall, endpoint, serviceType],
+    }),
+  };
+}
+
+/**
+ * Build a pool deposit call (ERC-4626 deposit into an AgentPool).
+ */
+export function buildPoolDepositCall(
+  poolAddress: `0x${string}`,
+  assets: bigint,
+  receiver: `0x${string}`
+): Call {
+  return {
+    to: poolAddress,
+    value: 0n,
+    data: encodeFunctionData({
+      abi: POOL_ABI_VIEM,
+      functionName: "deposit",
+      args: [assets, receiver],
     }),
   };
 }

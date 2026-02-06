@@ -76,13 +76,16 @@ contract ServiceRegistryTest is BaseTest {
     // ==================== registerService ====================
 
     function test_RegisterService_Success() public {
+        // serviceOwner == agentOwner == NFT owner == agentWallet (register() sets both)
+        address agentWallet = identityRegistry.getAgentWallet(agentId);
+
         vm.prank(serviceOwner);
 
         vm.expectEmit(true, true, false, true);
         emit IServiceRegistry.ServiceRegistered(
             SERVICE_ID,
             agentId,
-            serviceOwner,
+            agentWallet,
             SERVICE_NAME,
             PRICE_PER_CALL,
             IServiceRegistry.ServiceType.API
@@ -98,7 +101,7 @@ contract ServiceRegistryTest is BaseTest {
         );
 
         IServiceRegistry.Service memory service = registry.getService(SERVICE_ID);
-        assertEq(service.owner, serviceOwner);
+        assertEq(service.owner, agentWallet);
         assertEq(service.name, SERVICE_NAME);
         assertEq(service.pricePerCall, PRICE_PER_CALL);
         assertEq(service.endpoint, ENDPOINT);
@@ -191,6 +194,21 @@ contract ServiceRegistryTest is BaseTest {
             SERVICE_ID,
             agentId,
             "",
+            PRICE_PER_CALL,
+            ENDPOINT,
+            IServiceRegistry.ServiceType.API
+        );
+    }
+
+    function test_RegisterService_RevertNotAgentOwnerOrWallet() public {
+        vm.prank(stranger);
+        vm.expectRevert(
+            abi.encodeWithSelector(ServiceRegistry.NotAgentOwnerOrWallet.selector, agentId, stranger)
+        );
+        registry.registerService(
+            SERVICE_ID,
+            agentId,
+            SERVICE_NAME,
             PRICE_PER_CALL,
             ENDPOINT,
             IServiceRegistry.ServiceType.API

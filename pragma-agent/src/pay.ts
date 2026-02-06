@@ -74,8 +74,12 @@ export async function handlePay(input: PayInput): Promise<string> {
           });
         }
 
-        // Send UserOp: approve USDC on gateway + payForService in a single batch
-        const result = await sendUserOp(
+        // Send two sequential UserOps:
+        // 1. Approve USDC on gateway
+        // 2. payForService
+        // (Batching as executeBatch causes AA23 on deployed smart account)
+        // skipSponsorship: smart account pays gas (Pimlico paymaster doesn't work with custom _validateUserOp)
+        await sendUserOp(
           registration.smartAccount as `0x${string}`,
           walletData.privateKey as `0x${string}`,
           [
@@ -84,11 +88,20 @@ export async function handlePay(input: PayInput): Promise<string> {
               X402_GATEWAY_ADDRESS as `0x${string}`,
               totalCost
             ),
+          ],
+          { skipSponsorship: true }
+        );
+
+        const result = await sendUserOp(
+          registration.smartAccount as `0x${string}`,
+          walletData.privateKey as `0x${string}`,
+          [
             buildPayForServiceCall(
               input.serviceId as `0x${string}`,
               BigInt(calls)
             ),
-          ]
+          ],
+          { skipSponsorship: true }
         );
 
         if (!result.success) {
