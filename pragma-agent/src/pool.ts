@@ -140,6 +140,8 @@ export async function handlePool(input: PoolInput): Promise<string> {
         const to = registration.smartAccount;
 
         // Send UserOp: pool.pull(to, assets) through the smart account
+        // skipSponsorship: smart account pays gas from its own ETH balance
+        // (Pimlico paymaster doesn't work with custom _validateUserOp)
         const result = await sendUserOp(
           registration.smartAccount as `0x${string}`,
           walletData.privateKey as `0x${string}`,
@@ -149,7 +151,8 @@ export async function handlePool(input: PoolInput): Promise<string> {
               to as `0x${string}`,
               assets
             ),
-          ]
+          ],
+          { skipSponsorship: true }
         );
 
         if (!result.success) {

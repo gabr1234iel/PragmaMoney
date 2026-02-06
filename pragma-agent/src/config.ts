@@ -22,6 +22,8 @@ export const PIMLICO_BUNDLER_URL = PIMLICO_API_KEY
   : "";
 
 // ─── Proxy / Relayer ─────────────────────────────────────────────────────────
+// TODO: Replace DEFAULT_PROXY_URL with stable production URL once deployed
+//       (agents on remote VPS need to reach this, not localhost)
 
 export const RELAYER_URL = process.env.RELAYER_URL || DEFAULT_PROXY_URL;
 

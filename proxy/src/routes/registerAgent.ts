@@ -465,6 +465,14 @@ registerAgentRouter.post("/finalize", async (req: Request, res: Response) => {
       await allowPoolTx.wait();
     }
 
+    // ---- Step 3: Fund smart account with ETH for self-pay UserOps ----
+    const fundAmount = ethers.parseEther(config.fundAmountEoa);
+    const n3 = allocateNonce();
+    console.log(`[register-agent/finalize] Funding smart account ${smartAccountAddress} with ${config.fundAmountEoa} ETH... (nonce=${n3})`);
+    const fundSmartAccTx = await deployer.sendTransaction({ to: smartAccountAddress, value: fundAmount, nonce: n3 });
+    const fundSmartAccReceipt = await fundSmartAccTx.wait();
+    txHashes.fundSmartAccount = fundSmartAccReceipt!.hash;
+
     // ---- Cleanup ----
     pendingRegistrations.delete(key);
 

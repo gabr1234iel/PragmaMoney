@@ -1,161 +1,155 @@
 ---
 name: pragma-money
-description: Browse, pay for, and call services on PragmaMoney
-metadata:
-  openclaw:
-    emoji: "\U0001F4B0"
-    requires:
-      bins: ["pragma-agent"]
-    install:
-      - id: "npm"
-        kind: "node"
-        package: "pragma-agent"
-        bins: ["pragma-agent"]
-        label: "Install pragma-agent (npm)"
+description: Register on-chain, manage wallets, browse services, and pay for API calls on PragmaMoney (Base Sepolia)
+user-invocable: true
+metadata: {"openclaw": {"emoji": "\ud83d\udcb0", "requires": {"bins": ["pragma-agent"], "env": ["PIMLICO_API_KEY"]}, "primaryEnv": "PIMLICO_API_KEY", "install": [{"id": "npm", "kind": "node", "package": "pragma-agent", "bins": ["pragma-agent"], "label": "Install pragma-agent (npm)"}]}}
 ---
 
-# PragmaMoney — How To Use
+# PragmaMoney
 
-You have the `pragma-agent` CLI tool installed. It lets you register on-chain, check your wallet, browse services, and pay for API calls using USDC on Base Sepolia.
+You have the `pragma-agent` CLI. It lets you register an on-chain identity, deploy a smart wallet, browse services, and pay for API calls using USDC on Base Sepolia.
 
-**IMPORTANT RULES:**
-1. Always run commands exactly as shown — do NOT modify the command structure
-2. Every command outputs JSON — parse the JSON to understand the result
-3. If a command fails, read the error JSON and report it — do NOT retry more than once
-4. The `register` command handles EVERYTHING automatically (funding, identity, wallet, pool) — just run it ONCE and wait
-5. Registration takes 30-60 seconds — be patient, do NOT interrupt or re-run it
+All commands output JSON. Parse the JSON to understand the result. If a command fails, read the error and report it to the user.
 
----
+## Getting Started (first-time setup)
 
-## Quick Reference
+Before using any service, you must register. This creates three things:
+1. **Identity NFT** (ERC-8004) owned by your agent EOA
+2. **Smart wallet** (ERC-4337) with spending policy (daily limit, allowed targets, expiry)
+3. **Funding pool** (ERC-4626 vault) where investors deposit USDC for your agent
 
-| What you want to do | Command |
-|---------------------|---------|
-| Register on PragmaMoney | `pragma-agent register --name "BotName" --endpoint "https://url" --daily-limit 100 --expiry-days 90 --pool-daily-cap 50` |
-| Check if registered | `pragma-agent wallet address` |
-| Check USDC balance | `pragma-agent wallet balance` |
-| Check spending policy | `pragma-agent wallet policy` |
-| List all services | `pragma-agent services list` |
-| Get service details | `pragma-agent services get --service-id 0x...` |
-| Search services | `pragma-agent services search --query "keyword"` |
-| Check pool funds remaining | `pragma-agent pool remaining` |
-| Pull USDC from pool | `pragma-agent pool pull --amount 5.00` |
-| Pay + call a service | `pragma-agent call --service-id 0x... --method POST --body '{"key":"val"}'` |
-| Pay without calling | `pragma-agent pay pay --service-id 0x... --calls 1` |
-| Verify a payment | `pragma-agent pay verify --payment-id 0x...` |
-
----
-
-## Step 1: Check If Already Registered
-
-Before doing anything, always check first:
+### Step 1: Check if already registered
 
 ```bash
 pragma-agent wallet address
 ```
 
-If the output JSON has `"registered": true`, you are already registered. Skip to Step 3.
+If `"registered": true`, skip to "Using Services" below.
 
-If `"registered": false`, proceed to Step 2.
-
----
-
-## Step 2: Register (One-Time, Automatic)
-
-Run this ONE command. It does everything automatically — funding, identity creation, smart wallet deployment, and pool creation. It takes 30-60 seconds. Wait for it to finish.
+### Step 2: Register
 
 ```bash
-pragma-agent register --name "YourBotName" --endpoint "https://your-endpoint.com" --daily-limit 100 --expiry-days 90 --pool-daily-cap 50
+pragma-agent register \
+  --name "AgentName" \
+  --endpoint "https://agent-endpoint.com" \
+  --daily-limit 100 \
+  --expiry-days 90 \
+  --pool-daily-cap 50
 ```
 
-**Replace** `YourBotName` with the name the user asked for, and the endpoint with what they specified. Keep `--daily-limit 100 --expiry-days 90 --pool-daily-cap 50` as defaults unless the user specified different values.
+This takes 30-60 seconds. **Do not interrupt or re-run.** The command:
+- Gets ETH funding from the relayer (for on-chain gas)
+- Mints your identity NFT on-chain
+- Deploys your smart wallet with spending policy
+- Binds the smart wallet to your identity
+- Creates an investor funding pool
+- Funds your smart wallet with ETH for UserOp gas
 
-The output JSON will contain:
-- `"success": true` if it worked
-- `"agentId"`, `"smartAccountAddress"`, `"poolAddress"` — your on-chain identity
-- `"error"` if something went wrong
+On success you get `agentId`, `smartAccountAddress`, and `poolAddress`.
 
-**If registration fails:** Report the error to the user. Do NOT retry automatically — the user needs to check the relayer.
-
-**If already registered:** The command returns an error saying "Agent is already registered" with your existing agentId. This is fine — you're already set up.
-
----
-
-## Step 3: Check Wallet Balance
+### Step 3: Verify balances
 
 ```bash
 pragma-agent wallet balance
 ```
 
-Shows your ETH and USDC balances. The `usdcBalance` field is your spending money.
+You should see ETH in both EOA and smart account, and 0 USDC until investors fund your pool.
 
----
+## Using Services
 
-## Step 4: Browse Services
-
-```bash
-pragma-agent services list
-```
-
-Returns all services from the on-chain ServiceRegistry with names, pricing, and serviceIds.
-
-To get details on a specific service:
+### Browse available services
 
 ```bash
-pragma-agent services get --service-id 0xTHE_SERVICE_ID_HERE
+pragma-agent services list                          # all services
+pragma-agent services get --service-id 0x...        # one service's details
+pragma-agent services search --query "keyword"      # search by name
 ```
 
----
-
-## Step 5: Pull Funds From Pool (If Needed)
-
-If your USDC balance is 0 and your pool has been funded by investors:
+### Pay and call a service (most common)
 
 ```bash
-pragma-agent pool remaining
+pragma-agent call --service-id 0x... --method GET
+pragma-agent call --service-id 0x... --method POST --body '{"key":"val"}'
 ```
 
-If there's remaining cap, pull what you need:
+One command: pays USDC on-chain via your smart wallet, then calls the API. The response is in the `"response"` field.
+
+### Pay only (no API call)
 
 ```bash
-pragma-agent pool pull --amount 5.00
+pragma-agent pay pay --service-id 0x... --calls 1
+pragma-agent pay verify --payment-id 0x...
 ```
 
----
-
-## Step 6: Pay + Call a Service
-
-This is the most common action. One command does payment and API call:
+## Managing Your Wallet
 
 ```bash
-pragma-agent call --service-id 0xTHE_SERVICE_ID --method GET
+pragma-agent wallet address          # EOA + smart account + registration status
+pragma-agent wallet balance          # ETH + USDC balances for both EOA and smart account
+pragma-agent wallet policy           # spending policy: daily limit, daily spend, expiry date
 ```
 
-For POST requests with a body:
+**Important**: Your smart wallet enforces a spending policy. Check `wallet policy` before large transactions:
+- `dailyLimit`: max USDC spendable per day
+- `expiresAt`: policy expiry (after this, all UserOps are rejected)
+- `dailySpend`: how much has been spent today (resets midnight UTC)
+
+## Managing Your Pool
+
+Your pool is an ERC-4626 vault funded by investors. You can pull USDC from it into your smart wallet, subject to a daily cap.
 
 ```bash
-pragma-agent call --service-id 0xTHE_SERVICE_ID --method POST --body '{"key":"value"}'
+pragma-agent pool info                        # pool metadata, total assets, daily cap
+pragma-agent pool remaining                   # how much USDC you can still pull today
+pragma-agent pool pull --amount 5.00          # withdraw 5 USDC from pool into smart wallet
 ```
 
-The output includes the API response in the `"response"` field.
+**Pool pull uses a UserOp** (ERC-4337 transaction through EntryPoint). Your smart wallet pays the gas from its own ETH balance.
 
----
+If `pool pull` fails with a gas error, your smart wallet may need more ETH. Report this to the user.
 
-## Error Handling
+## Typical Workflow
 
-| Error in JSON | What to do |
-|---------------|------------|
-| `"Agent not registered"` | Run `pragma-agent register` first |
-| `"Insufficient USDC balance"` | Run `pragma-agent pool pull --amount X` |
-| `"Daily cap exceeded"` | Wait until tomorrow (resets at midnight UTC) |
-| `"PIMLICO_API_KEY not set"` | Tell the user to set the environment variable |
-| `"Fund phase failed"` | Tell the user the relayer proxy is not running |
-| `"Agent is already registered"` | This is fine — you're already set up, proceed to use services |
+1. `pragma-agent wallet address` -- check registration status
+2. `pragma-agent register ...` -- one-time setup (if not registered)
+3. `pragma-agent services list` -- find services to use
+4. `pragma-agent pool pull --amount 10.00` -- pull USDC from pool (if balance is low)
+5. `pragma-agent call --service-id 0x... --method GET` -- pay + call
 
----
+## Commands Reference
 
-## USDC Amounts
+| Command | Description |
+|---------|-------------|
+| `pragma-agent register --name ... --endpoint ... --daily-limit N --expiry-days N --pool-daily-cap N` | One-time registration |
+| `pragma-agent wallet address` | Registration status |
+| `pragma-agent wallet balance` | ETH + USDC balances |
+| `pragma-agent wallet policy` | Spending policy |
+| `pragma-agent services list` | All services |
+| `pragma-agent services get --service-id 0x...` | Service details |
+| `pragma-agent services search --query "..."` | Search services |
+| `pragma-agent pool info` | Pool metadata |
+| `pragma-agent pool remaining` | Remaining daily cap |
+| `pragma-agent pool pull --amount N` | Pull USDC from pool |
+| `pragma-agent call --service-id 0x... --method GET/POST [--body '...']` | Pay + call |
+| `pragma-agent pay pay --service-id 0x... --calls N` | Pay only |
+| `pragma-agent pay verify --payment-id 0x...` | Verify payment |
 
-- USDC uses 6 decimals: `1000000` = 1.00 USDC
-- Always use human-readable amounts in commands (e.g., `5.00`, `0.01`)
-- The CLI handles decimal conversion automatically
+## Errors
+
+| Error | Fix |
+|-------|-----|
+| `Agent not registered` | Run `pragma-agent register` |
+| `Insufficient USDC balance` | Run `pragma-agent pool pull --amount X` |
+| `Daily cap exceeded` | Wait until tomorrow (resets midnight UTC) |
+| `PIMLICO_API_KEY not set` | Set the `PIMLICO_API_KEY` environment variable |
+| `Fund phase failed` | The relayer proxy is not running or unreachable |
+| `Agent is already registered` | Already set up, proceed to use services |
+| `UserOp failed on-chain` | Check smart wallet ETH balance and spending policy |
+
+## Notes
+
+- USDC uses 6 decimals. Use human-readable amounts in commands (e.g. `5.00` not `5000000`).
+- Registration is idempotent per wallet. Re-running returns the existing registration.
+- The wallet file is at `~/.openclaw/pragma-agent/wallet.json`.
+- `RELAYER_URL` must be set to the PragmaMoney proxy's public URL (default is localhost, which only works for local dev).
+- Pool pulls and service payments go through ERC-4337 UserOperations. The smart wallet pays gas from its own ETH.

@@ -14,8 +14,12 @@
       },
       "pimlicoApiKey": {
         "type": "string",
-        "description": "Pimlico API key for UserOps"
+        "description": "Pimlico API key for UserOp bundler"
       }
     }
+  },
+  "uiHints": {
+    "pimlicoApiKey": { "label": "Pimlico API Key", "sensitive": true },
+    "relayerUrl": { "label": "Relayer URL", "placeholder": "http://localhost:4402" }
   }
 }
