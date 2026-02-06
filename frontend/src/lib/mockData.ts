@@ -3,6 +3,7 @@ import { Service, ServiceType, Transaction, SpendingPolicy, DailySpend } from "@
 export const mockServices: Service[] = [
   {
     id: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    agentId: BigInt(1),
     name: "GPT-4 Inference API",
     description: "High-quality language model inference with GPT-4",
     owner: "0x1234567890123456789012345678901234567890",
@@ -15,6 +16,7 @@ export const mockServices: Service[] = [
   },
   {
     id: "0x2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    agentId: BigInt(2),
     name: "Image Generation Service",
     description: "AI-powered image generation and editing",
     owner: "0x2234567890123456789012345678901234567890",
@@ -27,6 +29,7 @@ export const mockServices: Service[] = [
   },
   {
     id: "0x3234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    agentId: BigInt(3),
     name: "Decentralized Storage",
     description: "IPFS-based distributed file storage with redundancy",
     owner: "0x3234567890123456789012345678901234567890",
@@ -39,6 +42,7 @@ export const mockServices: Service[] = [
   },
   {
     id: "0x4234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    agentId: BigInt(4),
     name: "Autonomous Trading Agent",
     description: "AI agent that executes DeFi trading strategies",
     owner: "0x4234567890123456789012345678901234567890",
@@ -51,6 +55,7 @@ export const mockServices: Service[] = [
   },
   {
     id: "0x5234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    agentId: BigInt(5),
     name: "Data Analysis API",
     description: "Real-time blockchain data analytics and insights",
     owner: "0x5234567890123456789012345678901234567890",
@@ -63,6 +68,7 @@ export const mockServices: Service[] = [
   },
   {
     id: "0x6234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    agentId: BigInt(6),
     name: "MCP Weather Service",
     description: "Weather data and forecasting via MCP protocol",
     owner: "0x6234567890123456789012345678901234567890",

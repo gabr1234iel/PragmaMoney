@@ -5,15 +5,15 @@ export const RPC_URL = "https://sepolia.base.org";
 export const DEFAULT_PROXY_URL = "http://localhost:4402";
 
 export const USDC_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
-export const SERVICE_REGISTRY_ADDRESS = "0xe232b66B144C2cE3ec6174cEF704B3576d6cDa84";
-export const X402_GATEWAY_ADDRESS = "0x3F13150Af381BE0Aa484630Bf72Ccf3cfAC4089A";
+export const SERVICE_REGISTRY_ADDRESS = "0x3bF572E49043E723Eb4b74C7081218597716a721";
+export const X402_GATEWAY_ADDRESS = "0xf5683155F413A74ac16E1282e29b6a913cb6903F";
 export const IDENTITY_REGISTRY_ADDRESS = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
-export const AGENT_ACCOUNT_FACTORY_ADDRESS = "0x8B4294B349530d03Fe94C216fc771206637AFDa9";
+export const AGENT_ACCOUNT_FACTORY_ADDRESS = "0x1768632c7d4A5f84A0Dd62b7f7c691E90d7EBf94";
 export const AGENT_POOL_FACTORY_ADDRESS = "0xcB016c9DC6c9bE4D6AaE84405B2686569F9cEc05";
 
 // ─── 4337 / Pimlico ──────────────────────────────────────────────────────────
 
-export const ENTRYPOINT_ADDRESS = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+export const ENTRYPOINT_ADDRESS = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
 
 export const PIMLICO_API_KEY = process.env.PIMLICO_API_KEY || "";
 
@@ -42,11 +42,11 @@ export const ERC20_ABI = [
 
 export const SERVICE_REGISTRY_ABI = [
   // Read service data
-  "function getService(bytes32 serviceId) view returns (tuple(address owner, string name, uint256 pricePerCall, string endpoint, uint8 serviceType, bool active, uint256 totalCalls, uint256 totalRevenue))",
+  "function getService(bytes32 serviceId) view returns (tuple(uint256 agentId, address owner, string name, uint256 pricePerCall, string endpoint, uint8 serviceType, bool active, uint256 totalCalls, uint256 totalRevenue))",
   "function getServiceCount() view returns (uint256)",
   "function getServiceIdAt(uint256 index) view returns (bytes32)",
   // Write
-  "function registerService(bytes32 serviceId, string name, uint256 pricePerCall, string endpoint, uint8 serviceType)",
+  "function registerService(bytes32 serviceId, uint256 agentId, string name, uint256 pricePerCall, string endpoint, uint8 serviceType)",
   "function recordUsage(bytes32 serviceId, uint256 calls, uint256 revenue)",
 ] as const;
 

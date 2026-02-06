@@ -14,12 +14,14 @@
  *   PIMLICO_API_KEY — enables UserOp tests (pool pull, pay, call)
  */
 
-import { handleWallet } from "../src/wallet.js";
+import { handleWallet, loadOrCreateWallet } from "../src/wallet.js";
 import { handleRegister } from "../src/register.js";
 import { handleServices } from "../src/services.js";
 import { handlePool } from "../src/pool.js";
 import { handlePay } from "../src/pay.js";
-import { PIMLICO_API_KEY, RELAYER_URL } from "../src/config.js";
+import { PIMLICO_API_KEY, RELAYER_URL, X402_GATEWAY_ADDRESS } from "../src/config.js";
+import { sendUserOp } from "../src/userop.js";
+import { encodeFunctionData } from "viem";
 
 function log(label: string, data: unknown) {
   console.log(`  ${label}:`, typeof data === "string" ? data : JSON.stringify(data, null, 2));
@@ -135,8 +137,38 @@ async function main() {
   } else {
     console.log("--- Step 9: UserOp tests ---");
 
-    // 9a. Pool pull (needs pool to have USDC deposited)
-    console.log("  9a. Attempting pool pull (0.01 USDC)...");
+    // 9a. Simple execute test — sends a no-value call to an allowed target (gateway)
+    //     This verifies the operator can sign and submit UserOps through the smart account
+    console.log("  9a. Simple execute UserOp (no-value call to gateway)...");
+    try {
+      const walletData = loadOrCreateWallet();
+      const smartAccount = walletData.registration?.smartAccount;
+      if (!smartAccount) {
+        log("9a skip", "No smart account registered");
+      } else {
+        // Call nonce() on the gateway — a read that won't revert
+        const nonceSig = encodeFunctionData({
+          abi: [{ inputs: [], name: "nonce", outputs: [{ type: "uint256" }], stateMutability: "view", type: "function" }] as const,
+          functionName: "nonce",
+        });
+        const result = await sendUserOp(
+          smartAccount as `0x${string}`,
+          walletData.privateKey as `0x${string}`,
+          [{
+            to: X402_GATEWAY_ADDRESS as `0x${string}`,
+            value: 0n,
+            data: nonceSig,
+          }]
+        );
+        log("9a success", `txHash=${result.txHash}, userOpHash=${result.userOpHash}`);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log("9a error (may be expected)", msg);
+    }
+
+    // 9b. Pool pull (needs pool to have USDC deposited)
+    console.log("  9b. Attempting pool pull (0.01 USDC)...");
     const pullResult = JSON.parse(await handlePool({
       action: "pull",
       amount: "0.01",
@@ -147,10 +179,10 @@ async function main() {
       log("Pull success", `txHash=${pullResult.txHash}`);
     }
 
-    // 9b. Pay for a service (needs smart account to have USDC)
+    // 9c. Pay for a service (needs smart account to have USDC)
     if (services.services?.length > 0) {
       const svc = services.services[0];
-      console.log(`  9b. Attempting pay for "${svc.name}" (${svc.pricePerCall} USDC)...`);
+      console.log(`  9c. Attempting pay for "${svc.name}" (${svc.pricePerCall} USDC)...`);
       const payResult = JSON.parse(await handlePay({
         action: "pay",
         serviceId: svc.serviceId,

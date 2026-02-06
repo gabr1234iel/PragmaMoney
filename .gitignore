@@ -44,3 +44,7 @@ frontend/out/
 cdp_api_key*.json
 
 docs.zip
+
+openclaw/
+
+pragma-agent/dist

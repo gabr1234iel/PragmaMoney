@@ -33,10 +33,10 @@ export const config: Config = {
     process.env.FACILITATOR_URL || "https://x402.org/facilitator",
   gatewayAddress:
     process.env.GATEWAY_ADDRESS ||
-    "0x3F13150Af381BE0Aa484630Bf72Ccf3cfAC4089A",
+    "0xf5683155F413A74ac16E1282e29b6a913cb6903F",
   serviceRegistryAddress:
     process.env.SERVICE_REGISTRY_ADDRESS ||
-    "0xe232b66B144C2cE3ec6174cEF704B3576d6cDa84",
+    "0x3bF572E49043E723Eb4b74C7081218597716a721",
   gatewayRpcUrl:
     process.env.GATEWAY_RPC_URL || "https://sepolia.base.org",
   usdcAddress:
@@ -49,7 +49,7 @@ export const config: Config = {
   identityRegistryAddress:
     process.env.IDENTITY_REGISTRY_ADDRESS || "0x8004A818BFB912233c491871b3d84c89A494BD9e",
   agentAccountFactoryAddress:
-    process.env.AGENT_ACCOUNT_FACTORY_ADDRESS || "0x8B4294B349530d03Fe94C216fc771206637AFDa9",
+    process.env.AGENT_ACCOUNT_FACTORY_ADDRESS || "0x1768632c7d4A5f84A0Dd62b7f7c691E90d7EBf94",
   agentPoolFactoryAddress:
     process.env.AGENT_POOL_FACTORY_ADDRESS || "0xcB016c9DC6c9bE4D6AaE84405B2686569F9cEc05",
   fundAmountEoa: process.env.FUND_AMOUNT_EOA || "0.0005",

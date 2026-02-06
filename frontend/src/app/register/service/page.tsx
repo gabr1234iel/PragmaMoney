@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import Link from "next/link";
+import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { keccak256, toHex } from "viem";
 import { ServiceType, SERVICE_TYPE_LABELS } from "@/types";
 import { parseUSDC } from "@/lib/utils";
-import { SERVICE_REGISTRY_ADDRESS, SERVICE_REGISTRY_ABI } from "@/lib/contracts";
+import {
+  SERVICE_REGISTRY_ADDRESS,
+  SERVICE_REGISTRY_ABI,
+  IDENTITY_REGISTRY_ADDRESS,
+  IDENTITY_REGISTRY_ABI,
+  AGENT_POOL_FACTORY_ADDRESS,
+  AGENT_POOL_FACTORY_ABI,
+} from "@/lib/contracts";
 import { CheckCircle, AlertCircle, Wallet, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +28,7 @@ const SERVICE_TYPE_NAMES: Record<ServiceType, string> = {
 
 export default function RegisterServicePage() {
   const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -35,6 +44,105 @@ export default function RegisterServicePage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [autoGenerateId, setAutoGenerateId] = useState(true);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
+
+  // Auto-detect agentId from connected wallet's identity NFT
+  const [detectedAgentId, setDetectedAgentId] = useState<bigint | null>(null);
+  const [agentIdLoading, setAgentIdLoading] = useState(false);
+
+  useEffect(() => {
+    if (!publicClient || !address) {
+      setDetectedAgentId(null);
+      return;
+    }
+
+    let cancelled = false;
+    setAgentIdLoading(true);
+
+    (async () => {
+      try {
+        // Quick check: does the user own any identity NFTs?
+        const balance = await publicClient.readContract({
+          address: IDENTITY_REGISTRY_ADDRESS,
+          abi: IDENTITY_REGISTRY_ABI,
+          functionName: "balanceOf",
+          args: [address],
+        });
+
+        if (cancelled) return;
+
+        if (balance === BigInt(0)) {
+          setDetectedAgentId(null);
+          setAgentIdLoading(false);
+          return;
+        }
+
+        // Find user's agentId via AgentFactory enumeration + multicall
+        // (avoids unreliable getLogs with fromBlock:0 on public RPCs)
+        const count = await publicClient.readContract({
+          address: AGENT_POOL_FACTORY_ADDRESS,
+          abi: AGENT_POOL_FACTORY_ABI,
+          functionName: "agentCount",
+        });
+
+        if (cancelled) return;
+
+        const agentCount = Number(count);
+        if (agentCount === 0) {
+          setDetectedAgentId(null);
+          setAgentIdLoading(false);
+          return;
+        }
+
+        // Batch get all agentIds
+        const idCalls = Array.from({ length: agentCount }, (_, i) => ({
+          address: AGENT_POOL_FACTORY_ADDRESS,
+          abi: AGENT_POOL_FACTORY_ABI,
+          functionName: "getAgentIdAt" as const,
+          args: [BigInt(i)] as const,
+        }));
+        const idResults = await publicClient.multicall({ contracts: idCalls });
+
+        if (cancelled) return;
+
+        const agentIds = idResults
+          .filter((r) => r.status === "success")
+          .map((r) => r.result as bigint);
+
+        // Batch check ownership
+        const ownerCalls = agentIds.map((id) => ({
+          address: IDENTITY_REGISTRY_ADDRESS,
+          abi: IDENTITY_REGISTRY_ABI,
+          functionName: "ownerOf" as const,
+          args: [id] as const,
+        }));
+        const ownerResults = await publicClient.multicall({ contracts: ownerCalls });
+
+        if (cancelled) return;
+
+        // Find the most recent agent owned by the connected address
+        let foundAgentId: bigint | null = null;
+        for (let i = agentIds.length - 1; i >= 0; i--) {
+          if (ownerResults[i].status === "success") {
+            const owner = ownerResults[i].result as string;
+            if (owner.toLowerCase() === address.toLowerCase()) {
+              foundAgentId = agentIds[i];
+              break;
+            }
+          }
+        }
+
+        if (!cancelled) {
+          setDetectedAgentId(foundAgentId);
+        }
+      } catch {
+        if (!cancelled) setDetectedAgentId(null);
+      } finally {
+        if (!cancelled) setAgentIdLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [publicClient, address]);
 
   const PROXY_URL = process.env.NEXT_PUBLIC_PROXY_URL || "http://localhost:4402";
 
@@ -68,6 +176,10 @@ export default function RegisterServicePage() {
         throw new Error("Please fill in all required fields");
       }
 
+      if (detectedAgentId === null) {
+        throw new Error("No agent identity found. Register as an agent first.");
+      }
+
       // Validate price
       const priceInSmallestUnit = parseUSDC(formData.pricePerCall);
       if (priceInSmallestUnit <= 0) {
@@ -94,6 +206,7 @@ export default function RegisterServicePage() {
         functionName: "registerService",
         args: [
           serviceIdBytes32,
+          detectedAgentId,
           formData.name,
           priceInSmallestUnit,
           proxyEndpoint,
@@ -202,6 +315,39 @@ export default function RegisterServicePage() {
                 <h2 className="font-display text-2xl font-semibold text-lobster-dark mb-6">
                   Service Details
                 </h2>
+
+                {/* Agent Identity Status */}
+                {agentIdLoading ? (
+                  <div className="mb-6 bg-lobster-surface border-2 border-lobster-border rounded-xl p-4">
+                    <div className="flex items-center space-x-2 text-lobster-text">
+                      <div className="w-4 h-4 border-2 border-lobster-primary border-t-transparent rounded-full animate-spin" />
+                      <span className="text-sm">Detecting agent identity...</span>
+                    </div>
+                  </div>
+                ) : detectedAgentId !== null ? (
+                  <div className="mb-6 bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                    <div className="flex items-center space-x-2 text-green-700">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="text-sm font-semibold">Agent #{detectedAgentId.toString()} detected</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+                    <div className="flex items-start space-x-2 text-amber-800">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-semibold mb-1">No agent identity found</p>
+                        <p>
+                          You must{" "}
+                          <Link href="/register/agent" className="text-lobster-primary hover:underline font-medium">
+                            register as an agent
+                          </Link>{" "}
+                          before you can register a service.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Service Name */}
                 <div className="mb-6">
@@ -383,7 +529,7 @@ export default function RegisterServicePage() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={isSubmitting || isConfirming || submitSuccess}
+                  disabled={isSubmitting || isConfirming || submitSuccess || detectedAgentId === null}
                   className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
                   {isSubmitting || isConfirming ? (

@@ -4,7 +4,7 @@
  * Wraps permissionless.js (Pimlico) + viem to build, sponsor, sign, and send
  * UserOperations through a pre-deployed AgentSmartAccount on Base Sepolia.
  *
- * EntryPoint v0.6 | Chain 84532 | Pimlico bundler + verifying paymaster
+ * EntryPoint v0.7 | Chain 84532 | Pimlico bundler + verifying paymaster
  */
 
 import {
@@ -40,18 +40,22 @@ export interface UserOpResult {
   success: boolean;
 }
 
-/** EntryPoint v0.6 UserOperation struct */
-interface UserOperationV06 {
+/** EntryPoint v0.7 UserOperation struct */
+interface UserOperationV07 {
   sender: Address;
   nonce: bigint;
-  initCode: Hex;
+  factory: Address | undefined;
+  factoryData: Hex | undefined;
   callData: Hex;
   callGasLimit: bigint;
   verificationGasLimit: bigint;
   preVerificationGas: bigint;
   maxFeePerGas: bigint;
   maxPriorityFeePerGas: bigint;
-  paymasterAndData: Hex;
+  paymaster: Address | undefined;
+  paymasterVerificationGasLimit: bigint | undefined;
+  paymasterPostOpGasLimit: bigint | undefined;
+  paymasterData: Hex | undefined;
   signature: Hex;
 }
 
@@ -141,21 +145,33 @@ function bigintToHex(n: bigint): Hex {
 }
 
 function hexifyUserOp(
-  op: UserOperationV06
-): Record<string, string> {
-  return {
+  op: UserOperationV07
+): Record<string, string | undefined> {
+  const result: Record<string, string | undefined> = {
     sender: op.sender,
     nonce: bigintToHex(op.nonce),
-    initCode: op.initCode,
     callData: op.callData,
     callGasLimit: bigintToHex(op.callGasLimit),
     verificationGasLimit: bigintToHex(op.verificationGasLimit),
     preVerificationGas: bigintToHex(op.preVerificationGas),
     maxFeePerGas: bigintToHex(op.maxFeePerGas),
     maxPriorityFeePerGas: bigintToHex(op.maxPriorityFeePerGas),
-    paymasterAndData: op.paymasterAndData,
     signature: op.signature,
   };
+
+  // v0.7: only include factory/paymaster fields when present
+  if (op.factory) {
+    result.factory = op.factory;
+    result.factoryData = op.factoryData ?? "0x";
+  }
+  if (op.paymaster) {
+    result.paymaster = op.paymaster;
+    result.paymasterVerificationGasLimit = bigintToHex(op.paymasterVerificationGasLimit ?? 0n);
+    result.paymasterPostOpGasLimit = bigintToHex(op.paymasterPostOpGasLimit ?? 0n);
+    result.paymasterData = op.paymasterData ?? "0x";
+  }
+
+  return result;
 }
 
 // ─── Core: sendUserOp ───────────────────────────────────────────────────────
@@ -171,7 +187,8 @@ function hexifyUserOp(
 export async function sendUserOp(
   smartAccountAddress: `0x${string}`,
   operatorPrivateKey: `0x${string}`,
-  calls: Call[]
+  calls: Call[],
+  options?: { skipSponsorship?: boolean }
 ): Promise<UserOpResult> {
   if (!PIMLICO_BUNDLER_URL) {
     throw new Error(
@@ -198,11 +215,11 @@ export async function sendUserOp(
     transport: http(PIMLICO_BUNDLER_URL),
     entryPoint: {
       address: ENTRYPOINT_ADDRESS as Address,
-      version: "0.6",
+      version: "0.7",
     },
   });
 
-  // 5. Encode callData for the smart account
+  // 4. Encode callData for the smart account
   let callData: Hex;
   if (calls.length === 1) {
     const c = calls[0];
@@ -222,7 +239,7 @@ export async function sendUserOp(
     });
   }
 
-  // 6. Get nonce from EntryPoint
+  // 5. Get nonce from EntryPoint
   const nonce = await publicClient.readContract({
     address: ENTRYPOINT_ADDRESS as Address,
     abi: ENTRYPOINT_ABI_VIEM,
@@ -230,89 +247,121 @@ export async function sendUserOp(
     args: [smartAccountAddress, 0n],
   });
 
-  // 7. Get gas prices from Pimlico
+  // 6. Get gas prices from Pimlico
   const gasPrice = await pimlicoClient.getUserOperationGasPrice();
   const { maxFeePerGas, maxPriorityFeePerGas } = gasPrice.fast;
 
-  // 8. Build the unsigned UserOp (dummy signature for estimation)
+  // 7. Build the unsigned UserOp (dummy signature for estimation)
+  //    The smart account expects raw ECDSA signature (65 bytes)
   const dummySignature =
     "0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c" as Hex;
 
-  const unsignedUserOp: UserOperationV06 = {
+  const unsignedUserOp: UserOperationV07 = {
     sender: smartAccountAddress,
     nonce: nonce as bigint,
-    initCode: "0x",
+    factory: undefined,
+    factoryData: undefined,
     callData,
     callGasLimit: 0n,
     verificationGasLimit: 0n,
     preVerificationGas: 0n,
     maxFeePerGas,
     maxPriorityFeePerGas,
-    paymasterAndData: "0x",
+    paymaster: undefined,
+    paymasterVerificationGasLimit: undefined,
+    paymasterPostOpGasLimit: undefined,
+    paymasterData: undefined,
     signature: dummySignature,
   };
 
-  // 9. Get paymaster sponsorship + gas estimates from Pimlico
-  const sponsorResult = await pimlicoClient.sponsorUserOperation({
-    userOperation: {
-      sender: unsignedUserOp.sender,
-      nonce: unsignedUserOp.nonce,
-      initCode: unsignedUserOp.initCode,
-      callData: unsignedUserOp.callData,
-      callGasLimit: unsignedUserOp.callGasLimit,
-      verificationGasLimit: unsignedUserOp.verificationGasLimit,
-      preVerificationGas: unsignedUserOp.preVerificationGas,
-      maxFeePerGas: unsignedUserOp.maxFeePerGas,
-      maxPriorityFeePerGas: unsignedUserOp.maxPriorityFeePerGas,
-      paymasterAndData: unsignedUserOp.paymasterAndData,
-      signature: unsignedUserOp.signature,
-    },
-  });
+  let sponsoredUserOp: UserOperationV07;
 
-  // 10. Merge sponsored values into the UserOp
-  const sponsoredUserOp: UserOperationV06 = {
-    ...unsignedUserOp,
-    callGasLimit: sponsorResult.callGasLimit,
-    verificationGasLimit: sponsorResult.verificationGasLimit,
-    preVerificationGas: sponsorResult.preVerificationGas,
-    paymasterAndData: sponsorResult.paymasterAndData,
-  };
+  if (options?.skipSponsorship) {
+    // 8a. Self-pay: estimate gas via bundler, no paymaster
+    const gasEstimate = await bundlerRpc<{
+      callGasLimit: string;
+      verificationGasLimit: string;
+      preVerificationGas: string;
+    }>("eth_estimateUserOperationGas", [
+      hexifyUserOp(unsignedUserOp),
+      ENTRYPOINT_ADDRESS,
+    ]);
 
-  // 11. Compute UserOp hash and sign it
+    sponsoredUserOp = {
+      ...unsignedUserOp,
+      callGasLimit: BigInt(gasEstimate.callGasLimit) * 2n,
+      verificationGasLimit: BigInt(gasEstimate.verificationGasLimit) * 2n,
+      preVerificationGas: BigInt(gasEstimate.preVerificationGas) * 2n,
+      paymaster: undefined,
+      paymasterVerificationGasLimit: undefined,
+      paymasterPostOpGasLimit: undefined,
+      paymasterData: undefined,
+    };
+  } else {
+    // 8b. Sponsored: get paymaster sponsorship + gas estimates from Pimlico
+    const sponsorResult = await pimlicoClient.sponsorUserOperation({
+      userOperation: {
+        sender: unsignedUserOp.sender,
+        nonce: unsignedUserOp.nonce,
+        callData: unsignedUserOp.callData,
+        callGasLimit: unsignedUserOp.callGasLimit,
+        verificationGasLimit: unsignedUserOp.verificationGasLimit,
+        preVerificationGas: unsignedUserOp.preVerificationGas,
+        maxFeePerGas: unsignedUserOp.maxFeePerGas,
+        maxPriorityFeePerGas: unsignedUserOp.maxPriorityFeePerGas,
+        signature: unsignedUserOp.signature,
+      },
+    });
+
+    sponsoredUserOp = {
+      ...unsignedUserOp,
+      callGasLimit: sponsorResult.callGasLimit,
+      verificationGasLimit: sponsorResult.verificationGasLimit,
+      preVerificationGas: sponsorResult.preVerificationGas,
+      paymaster: sponsorResult.paymaster as Address | undefined,
+      paymasterVerificationGasLimit: sponsorResult.paymasterVerificationGasLimit,
+      paymasterPostOpGasLimit: sponsorResult.paymasterPostOpGasLimit,
+      paymasterData: sponsorResult.paymasterData as Hex | undefined,
+    };
+  }
+
+  // 10. Compute UserOp hash and sign it
   const userOpHash = getUserOperationHash({
     chainId: baseSepolia.id,
     entryPointAddress: ENTRYPOINT_ADDRESS as Address,
-    entryPointVersion: "0.6",
+    entryPointVersion: "0.7",
     userOperation: {
       sender: sponsoredUserOp.sender,
       nonce: sponsoredUserOp.nonce,
-      initCode: sponsoredUserOp.initCode as Hex | undefined,
+      factory: sponsoredUserOp.factory,
+      factoryData: sponsoredUserOp.factoryData,
       callData: sponsoredUserOp.callData,
       callGasLimit: sponsoredUserOp.callGasLimit,
       verificationGasLimit: sponsoredUserOp.verificationGasLimit,
       preVerificationGas: sponsoredUserOp.preVerificationGas,
       maxFeePerGas: sponsoredUserOp.maxFeePerGas,
       maxPriorityFeePerGas: sponsoredUserOp.maxPriorityFeePerGas,
-      paymasterAndData: sponsoredUserOp.paymasterAndData as Hex | undefined,
+      paymaster: sponsoredUserOp.paymaster,
+      paymasterVerificationGasLimit: sponsoredUserOp.paymasterVerificationGasLimit,
+      paymasterPostOpGasLimit: sponsoredUserOp.paymasterPostOpGasLimit,
+      paymasterData: sponsoredUserOp.paymasterData,
       signature: sponsoredUserOp.signature,
     },
   });
 
-  const signature = await operatorAccount.signMessage({
+  // Raw ECDSA signature — no ABI wrapping needed for v0.7 contract
+  const rawSignature = await operatorAccount.signMessage({
     message: { raw: userOpHash as Hex },
   });
+  sponsoredUserOp.signature = rawSignature;
 
-  sponsoredUserOp.signature = signature;
-
-  // 12. Submit via bundler (raw JSON-RPC)
-  //     We use a raw fetch to the Pimlico RPC to avoid fighting viem's strict
-  //     RPC type system for bundler-specific methods.
+  // 11. Submit via bundler (raw JSON-RPC)
   const sendResult = await bundlerRpc<string>("eth_sendUserOperation", [
     hexifyUserOp(sponsoredUserOp),
     ENTRYPOINT_ADDRESS,
   ]);
 
-  // 13. Poll for receipt
+  // 12. Poll for receipt
   const receipt = await pollForReceipt(sendResult, 60_000);
 
   return {

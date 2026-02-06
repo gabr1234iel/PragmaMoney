@@ -11,6 +11,7 @@ import {
 
 interface ServiceInfo {
   serviceId: string;
+  agentId: string;
   owner: string;
   name: string;
   pricePerCall: string;
@@ -32,6 +33,7 @@ function getRegistry(rpcUrl?: string): Contract {
 }
 
 function formatService(serviceId: string, raw: {
+  agentId: bigint;
   owner: string;
   name: string;
   pricePerCall: bigint;
@@ -44,6 +46,7 @@ function formatService(serviceId: string, raw: {
   const typeId = Number(raw.serviceType);
   return {
     serviceId,
+    agentId: raw.agentId.toString(),
     owner: raw.owner,
     name: raw.name,
     pricePerCall: formatUnits(raw.pricePerCall, USDC_DECIMALS),

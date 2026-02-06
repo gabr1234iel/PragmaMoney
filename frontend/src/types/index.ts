@@ -8,6 +8,7 @@ export enum ServiceType {
 
 export interface Service {
   id: string;
+  agentId: bigint;
   owner: string;
   pricePerCall: bigint;
   endpoint: string;

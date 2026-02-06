@@ -46,6 +46,7 @@ export function useServiceRegistry() {
         });
         fetched.push({
           id: serviceId,
+          agentId: data.agentId,
           owner: data.owner,
           name: data.name,
           pricePerCall: data.pricePerCall,

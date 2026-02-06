@@ -23,7 +23,7 @@ contract UniswapV4ForkTest is Test {
 
     // ==================== Constants ====================
 
-    address public constant ENTRY_POINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    address public constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
     uint8 internal constant V4_SWAP = 0x10;
     uint8 internal constant SWAP_EXACT_IN_SINGLE = 0x06;
@@ -137,7 +137,7 @@ contract UniswapV4ForkTest is Test {
         assembly { size := extcodesize(0x492E6456D9528771018DeB9E87ef7750EF184104) }
         assertGt(size, 0, "UniversalRouter should be deployed on Base Sepolia");
 
-        assembly { size := extcodesize(0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789) }
+        assembly { size := extcodesize(0x0000000071727De22E5E9d8BAf0edAc6f37da032) }
         assertGt(size, 0, "EntryPoint should be deployed on Base Sepolia");
 
         console2.log("All contracts verified on Base Sepolia fork");

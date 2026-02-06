@@ -20,7 +20,7 @@ contract Deploy is Script {
     address public USDC;
 
     // Canonical ERC-4337 v0.7 EntryPoint
-    address constant ENTRY_POINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    address constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
     // Amount to mint to deployer (1000 USDC = 1000 * 10^6 = 1000000000)
     uint256 constant MINT_AMOUNT = 1000 * 10**6;
@@ -181,19 +181,23 @@ contract RedeployGatewayRealUSDC is Script {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
         address proxySigner = vm.envAddress("PROXY_SIGNER_ADDRESS");
+        address identityRegistry = vm.envAddress("IDENTITY_REGISTRY_ADDRESS");
+        address agentFactory = vm.envAddress("AGENT_FACTORY_ADDRESS");
 
         console2.log("Deployer:", deployer);
         console2.log("Proxy signer:", proxySigner);
         console2.log("USDC (real):", REAL_USDC);
+        console2.log("IdentityRegistry:", identityRegistry);
+        console2.log("AgentFactory:", agentFactory);
         console2.log("");
 
         vm.startBroadcast(deployerPrivateKey);
 
         // 1. Deploy new ServiceRegistry
-        ServiceRegistry registry = new ServiceRegistry(deployer);
+        ServiceRegistry registry = new ServiceRegistry(deployer, identityRegistry, agentFactory);
 
         // 2. Deploy new x402Gateway pointing to new registry, using REAL USDC
-        x402Gateway gateway = new x402Gateway(address(registry), REAL_USDC);
+        x402Gateway gateway = new x402Gateway(address(registry), REAL_USDC, identityRegistry, agentFactory);
 
         // 3. Authorize gateway on registry
         registry.setGateway(address(gateway));
@@ -208,6 +212,8 @@ contract RedeployGatewayRealUSDC is Script {
         console2.log("ServiceRegistry:", address(registry));
         console2.log("x402Gateway:", address(gateway));
         console2.log("USDC:", REAL_USDC);
+        console2.log("IdentityRegistry:", identityRegistry);
+        console2.log("AgentFactory:", agentFactory);
         console2.log("Proxy signer authorized:", proxySigner);
     }
 }

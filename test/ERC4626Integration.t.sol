@@ -16,7 +16,7 @@ contract ERC4626IntegrationTest is Test {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
 
-    address public constant ENTRY_POINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    address public constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
     MockERC20 public asset;
     MockERC4626Vault public vault;

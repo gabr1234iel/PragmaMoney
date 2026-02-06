@@ -27,7 +27,7 @@ contract AgentSmartAccount is BaseAccount, Initializable {
 
     /// @notice Canonical ERC-4337 v0.7 EntryPoint on Base Sepolia
     IEntryPoint private constant ENTRY_POINT =
-        IEntryPoint(0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
+        IEntryPoint(0x0000000071727De22E5E9d8BAf0edAc6f37da032);
 
     /// @notice ERC-20 transfer function selector for calldata decoding
     bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256("transfer(address,uint256)"));

@@ -3,9 +3,9 @@ import { Address } from "viem";
 // Contract addresses on Base Sepolia (deployed)
 // Real USDC — required by x402 facilitator (EIP-3009 support)
 export const USDC_ADDRESS: Address = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
-export const GATEWAY_ADDRESS: Address = "0x3F13150Af381BE0Aa484630Bf72Ccf3cfAC4089A";
-export const SERVICE_REGISTRY_ADDRESS: Address = "0xe232b66B144C2cE3ec6174cEF704B3576d6cDa84";
-export const AGENT_FACTORY_ADDRESS: Address = "0x8B4294B349530d03Fe94C216fc771206637AFDa9";
+export const GATEWAY_ADDRESS: Address = "0xf5683155F413A74ac16E1282e29b6a913cb6903F";
+export const SERVICE_REGISTRY_ADDRESS: Address = "0x3bF572E49043E723Eb4b74C7081218597716a721";
+export const AGENT_FACTORY_ADDRESS: Address = "0x1768632c7d4A5f84A0Dd62b7f7c691E90d7EBf94";
 
 // AgentFactory (Launchpad pool factory) — deployed by DeployAgentFactory script
 export const AGENT_POOL_FACTORY_ADDRESS: Address = "0xcB016c9DC6c9bE4D6AaE84405B2686569F9cEc05";
@@ -117,6 +117,7 @@ export const SERVICE_REGISTRY_ABI = [
   {
     inputs: [
       { name: "serviceId", type: "bytes32" },
+      { name: "agentId", type: "uint256" },
       { name: "name", type: "string" },
       { name: "pricePerCall", type: "uint256" },
       { name: "endpoint", type: "string" },
@@ -133,6 +134,7 @@ export const SERVICE_REGISTRY_ABI = [
     outputs: [
       {
         components: [
+          { name: "agentId", type: "uint256" },
           { name: "owner", type: "address" },
           { name: "name", type: "string" },
           { name: "pricePerCall", type: "uint256" },
@@ -209,6 +211,13 @@ export const X402_GATEWAY_ABI = [
 ] as const;
 
 export const IDENTITY_REGISTRY_ABI = [
+  {
+    inputs: [{ name: "owner", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
   {
     inputs: [{ name: "agentURI", type: "string" }],
     name: "register",

@@ -16,7 +16,7 @@ contract AgentSmartAccountTest is Test {
     MockERC20 public usdc;
 
     // The canonical EntryPoint
-    address public constant ENTRY_POINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    address public constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
     bytes32 public constant ACTIONS_ROOT = keccak256("default-actions-root");
 
     address public owner;
