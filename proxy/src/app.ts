@@ -11,6 +11,8 @@ import {
 } from "./services/resourceStore.js";
 import { forwardRequest } from "./services/proxyForward.js";
 import type { ServiceType } from "./types/x402.js";
+import { registerAgentRouter } from "./routes/registerAgent.js";
+import { fundAgentRouter } from "./routes/fundAgent.js";
 
 // ---------------------------------------------------------------------------
 // Express App
@@ -117,6 +119,12 @@ app.post("/admin/register", adminAuth(), (req: Request, res: Response) => {
 
   res.status(201).json(resource);
 });
+
+// Agent registration relayer (agent-owned NFTs, 2-phase: fund + setup)
+app.use("/register-agent", registerAgentRouter);
+
+// Standalone ETH faucet for already-registered agents
+app.use("/fund-agent", fundAgentRouter);
 
 // ---------------------------------------------------------------------------
 // Proxy Routes (payment-gated)
