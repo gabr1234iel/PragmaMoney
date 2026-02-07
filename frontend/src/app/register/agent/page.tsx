@@ -374,8 +374,8 @@ export default function RegisterAgentPage() {
               </div>
             )}
             {tx.status === "success" && (
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-green-600" />
+              <div className="w-10 h-10 rounded-full bg-[#0000ff]/10 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-[#0000ff]" />
               </div>
             )}
             {tx.status === "error" && (
@@ -386,7 +386,7 @@ export default function RegisterAgentPage() {
             <div className="flex-1">
               <h3 className="font-display text-lg font-semibold text-lobster-dark">{label}</h3>
               {tx.status === "pending" && <p className="text-sm text-lobster-text">Confirming transaction...</p>}
-              {tx.status === "success" && <p className="text-sm text-green-600">{tx.result}</p>}
+              {tx.status === "success" && <p className="text-sm text-[#0000ff]">{tx.result}</p>}
               {tx.status === "error" && <p className="text-sm text-red-600">{tx.error}</p>}
             </div>
           </div>
@@ -817,7 +817,7 @@ export default function RegisterAgentPage() {
               {/* Pool transaction status */}
               {poolTx.status !== "idle" && (
                 <div className={`p-4 rounded-xl border mt-6 ${
-                  poolTx.status === "success" ? "bg-green-50 border-green-200" :
+                  poolTx.status === "success" ? "bg-[#0000ff]/10 border-[#0000ff]/20" :
                   poolTx.status === "error" ? "bg-red-50 border-red-200" :
                   "bg-yellow-50 border-yellow-200"
                 }`}>
@@ -864,8 +864,8 @@ export default function RegisterAgentPage() {
         {currentStep === 5 && (
           <div className="max-w-2xl mx-auto">
             <div className="card text-center py-12">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="w-10 h-10 text-green-600" />
+              <div className="w-20 h-20 bg-[#0000ff]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="w-10 h-10 text-[#0000ff]" />
               </div>
               <h2 className="font-display text-3xl font-bold text-lobster-dark mb-4">
                 Agent Registered Successfully!

@@ -75,8 +75,8 @@ export interface Agent {
 
 export const SERVICE_TYPE_COLORS: Record<ServiceType, string> = {
   [ServiceType.COMPUTE]: "bg-blue-100 text-blue-800 border-blue-200",
-  [ServiceType.STORAGE]: "bg-green-100 text-green-800 border-green-200",
+  [ServiceType.STORAGE]: "bg-[#0000ff]/10 text-[#0000ff] border-[#0000ff]/20",
   [ServiceType.API]: "bg-lobster-surface text-lobster-primary border-lobster-border",
-  [ServiceType.AGENT]: "bg-purple-100 text-purple-800 border-purple-200",
+  [ServiceType.AGENT]: "bg-lobster-primary/10 text-lobster-primary border-lobster-primary/20",
   [ServiceType.OTHER]: "bg-gray-100 text-gray-800 border-gray-200",
 };

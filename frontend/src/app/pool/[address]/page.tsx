@@ -209,13 +209,20 @@ export default function PoolPage({ params }: { params: { address: string } }) {
                   href={`https://sepolia.basescan.org/nft/0x8004A818BFB912233c491871b3d84c89A494BD9e/${pool.agentId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors duration-200"
+                  className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-lobster-primary/10 text-lobster-primary hover:bg-lobster-primary/20 transition-colors duration-200"
                 >
                   <Bot className="w-4 h-4" />
                   <span className="text-sm font-medium">{pool.agentName}</span>
                   <ExternalLink className="w-3 h-3" />
                 </Link>
-                <span className={cn("badge", pool.agentRevoked ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700")}>
+                <span
+                  className={cn(
+                    "badge",
+                    pool.agentRevoked
+                      ? "bg-red-100 text-red-700"
+                      : "bg-[#0000ff]/10 text-[#0000ff]"
+                  )}
+                >
                   {pool.agentRevoked ? "Revoked" : "Active"}
                 </span>
               </div>
@@ -234,15 +241,15 @@ export default function PoolPage({ params }: { params: { address: string } }) {
                 <h2 className="font-display text-2xl font-semibold text-lobster-dark">Pool Overview</h2>
               </div>
               <div className="grid md:grid-cols-3 gap-4">
-                <div className="bg-lobster-surface rounded-xl p-4">
+                <div className="bg-[#F7F5F9] border border-[#E7E1EA] rounded-xl p-4">
                   <p className="text-sm text-lobster-text mb-1">Total Assets</p>
                   <p className="font-display text-3xl font-bold text-lobster-dark">${formatUSDC(pool.totalAssets)}</p>
                 </div>
-                <div className="bg-lobster-surface rounded-xl p-4">
+                <div className="bg-[#F7F5F9] border border-[#E7E1EA] rounded-xl p-4">
                   <p className="text-sm text-lobster-text mb-1">Share Price</p>
                   <p className="font-display text-2xl font-bold text-lobster-dark">{parseInt(pool.sharePrice) / 1_000_000} USDC</p>
                 </div>
-                <div className="bg-lobster-surface rounded-xl p-4">
+                <div className="bg-[#F7F5F9] border border-[#E7E1EA] rounded-xl p-4">
                   <p className="text-sm text-lobster-text mb-1">Total Shares</p>
                   <p className="font-display text-2xl font-bold text-lobster-dark">{formatShares(pool.totalSupply)}</p>
                 </div>
@@ -266,10 +273,12 @@ export default function PoolPage({ params }: { params: { address: string } }) {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-lobster-text">Remaining</span>
-                  <span className="font-semibold text-green-600">${formatUSDC(pool.remainingCapToday)}</span>
+                  <span className="font-semibold text-[#0000ff]">
+                    ${formatUSDC(pool.remainingCapToday)}
+                  </span>
                 </div>
                 <div className="mt-4">
-                  <div className="w-full h-3 bg-lobster-surface rounded-full overflow-hidden">
+                  <div className="w-full h-3 bg-[#EFE8F1] rounded-full overflow-hidden">
                     <div
                       className="h-full bg-lobster-primary transition-all duration-500 ease-out rounded-full"
                       style={{ width: `${progressPercent}%` }}
@@ -367,7 +376,10 @@ export default function PoolPage({ params }: { params: { address: string } }) {
                   <button
                     onClick={handleApprove}
                     disabled={!depositAmount || approveTx.status === "pending" || approveTx.status === "success"}
-                    className={cn("btn-primary w-full", approveTx.status === "success" && "bg-green-600 hover:bg-green-700")}
+                    className={cn(
+                      "btn-primary w-full",
+                      approveTx.status === "success" && "bg-[#0000ff] hover:bg-[#0000ff]/80"
+                    )}
                   >
                     {approveTx.status === "pending" ? (
                       <span className="flex items-center justify-center space-x-2"><Loader2 className="w-4 h-4 animate-spin" /><span>Approving...</span></span>
@@ -391,7 +403,7 @@ export default function PoolPage({ params }: { params: { address: string } }) {
                   <button
                     onClick={handleDeposit}
                     disabled={!depositAmount || approveTx.status !== "success" || depositTx.status === "pending"}
-                    className="btn-primary w-full bg-green-600 hover:bg-green-700"
+                    className="btn-primary w-full bg-[#0000ff] hover:bg-[#0000ff]/80"
                   >
                     {depositTx.status === "pending" ? (
                       <span className="flex items-center justify-center space-x-2"><Loader2 className="w-4 h-4 animate-spin" /><span>Depositing...</span></span>
@@ -410,9 +422,9 @@ export default function PoolPage({ params }: { params: { address: string } }) {
                     </div>
                   )}
                   {depositTx.status === "success" && (
-                    <div className="flex items-start space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-green-700">Deposit successful!</p>
+                    <div className="flex items-start space-x-2 p-3 bg-[#0000ff]/10 border border-[#0000ff]/20 rounded-lg">
+                      <CheckCircle className="w-4 h-4 text-[#0000ff] flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-[#0000ff]">Deposit successful!</p>
                     </div>
                   )}
                 </div>
@@ -428,16 +440,23 @@ export default function PoolPage({ params }: { params: { address: string } }) {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-lobster-surface rounded-xl p-4">
+                  <div className="bg-[#F7F5F9] border border-[#E7E1EA] rounded-xl p-4">
                     <p className="text-sm text-lobster-text mb-1">Shares Held</p>
                     <p className="font-display text-2xl font-bold text-lobster-dark">{formatShares(userPosition.shares)}</p>
                   </div>
-                  <div className="bg-lobster-surface rounded-xl p-4">
+                  <div className="bg-[#F7F5F9] border border-[#E7E1EA] rounded-xl p-4">
                     <p className="text-sm text-lobster-text mb-1">Value</p>
                     <p className="font-display text-2xl font-bold text-lobster-dark">${formatUSDC(userPosition.assetsValue)}</p>
                   </div>
 
-                  <div className={cn("flex items-center space-x-2 p-3 rounded-lg", userPosition.isLocked ? "bg-orange-50 border border-orange-200" : "bg-green-50 border border-green-200")}>
+                  <div
+                    className={cn(
+                      "flex items-center space-x-2 p-3 rounded-lg",
+                      userPosition.isLocked
+                        ? "bg-orange-50 border border-orange-200"
+                        : "bg-[#0000ff]/10 border border-[#0000ff]/20"
+                    )}
+                  >
                     {userPosition.isLocked ? (
                       <>
                         <Lock className="w-4 h-4 text-orange-600" />
@@ -448,8 +467,8 @@ export default function PoolPage({ params }: { params: { address: string } }) {
                       </>
                     ) : (
                       <>
-                        <Unlock className="w-4 h-4 text-green-600" />
-                        <p className="text-sm font-medium text-green-900">Unlocked</p>
+                        <Unlock className="w-4 h-4 text-[#0000ff]" />
+                        <p className="text-sm font-medium text-[#0000ff]">Unlocked</p>
                       </>
                     )}
                   </div>
@@ -499,9 +518,9 @@ export default function PoolPage({ params }: { params: { address: string } }) {
                       </div>
                     )}
                     {withdrawTx.status === "success" && (
-                      <div className="flex items-start space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg mt-2">
-                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-green-700">Withdrawal successful!</p>
+                      <div className="flex items-start space-x-2 p-3 bg-[#0000ff]/10 border border-[#0000ff]/20 rounded-lg mt-2">
+                        <CheckCircle className="w-4 h-4 text-[#0000ff] flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-[#0000ff]">Withdrawal successful!</p>
                       </div>
                     )}
                   </div>

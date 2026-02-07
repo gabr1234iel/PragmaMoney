@@ -31,8 +31,8 @@ export function ServiceCard({ service, onClick }: ServiceCardProps) {
           <span className={cn("badge border", typeColor)}>{typeLabel}</span>
         </div>
         {service.active && (
-          <div className="flex items-center space-x-1 text-green-600">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <div className="flex items-center space-x-1 text-[#0000ff]">
+            <span className="w-2 h-2 bg-[#0000ff] rounded-full animate-pulse" />
             <span className="text-xs font-medium">Active</span>
           </div>
         )}

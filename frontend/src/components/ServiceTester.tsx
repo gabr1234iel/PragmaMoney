@@ -88,7 +88,7 @@ export function ServiceTester({
                   "px-4 py-2 rounded-lg font-medium transition-all duration-200",
                   method === m
                     ? "bg-lobster-primary text-white shadow-md"
-                    : "bg-lobster-surface text-lobster-dark hover:bg-lobster-border"
+                    : "bg-lobster-primary text-white border border-[#E7E1EA] hover:bg-lobster-soft-hover"
                 )}
               >
                 {m}
@@ -102,7 +102,7 @@ export function ServiceTester({
           <label className="block text-sm font-medium text-lobster-text mb-2">
             Endpoint
           </label>
-          <div className="bg-lobster-surface px-4 py-3 rounded-xl font-mono text-sm text-lobster-dark break-all overflow-hidden">
+          <div className="bg-[#F7F5F9] border border-[#E7E1EA] px-4 py-3 rounded-xl font-mono text-sm text-[#1C1B1F] break-all overflow-hidden">
             {service.endpoint}
           </div>
         </div>
@@ -213,7 +213,7 @@ export function ServiceTester({
                   className={cn(
                     "inline-flex px-4 py-2 rounded-lg font-semibold",
                     response.status >= 200 && response.status < 300
-                      ? "bg-green-100 text-green-800"
+                      ? "bg-[#0000ff]/10 text-[#0000ff]"
                       : response.status >= 400
                       ? "bg-red-100 text-red-800"
                       : "bg-yellow-100 text-yellow-800"

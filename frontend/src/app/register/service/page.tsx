@@ -325,8 +325,8 @@ export default function RegisterServicePage() {
                     </div>
                   </div>
                 ) : detectedAgentId !== null ? (
-                  <div className="mb-6 bg-green-50 border-2 border-green-200 rounded-xl p-4">
-                    <div className="flex items-center space-x-2 text-green-700">
+                  <div className="mb-6 bg-[#0000ff]/10 border-2 border-[#0000ff]/20 rounded-xl p-4">
+                    <div className="flex items-center space-x-2 text-[#0000ff]">
                       <CheckCircle className="w-5 h-5" />
                       <span className="text-sm font-semibold">Agent #{detectedAgentId.toString()} detected</span>
                     </div>
@@ -399,7 +399,7 @@ export default function RegisterServicePage() {
                     placeholder="service-id-123"
                     className={cn(
                       "input-field",
-                      autoGenerateId && "bg-lobster-surface cursor-not-allowed"
+                      autoGenerateId && "bg-[#F7F5F9] text-[#1C1B1F] placeholder:text-[#7A7287] cursor-not-allowed"
                     )}
                   />
                   <p className="text-xs text-lobster-text mt-1">
@@ -427,8 +427,8 @@ export default function RegisterServicePage() {
                           className={cn(
                             "px-4 py-3 rounded-xl font-medium transition-all duration-200 border-2",
                             isSelected
-                              ? "bg-lobster-primary text-white border-lobster-primary shadow-md"
-                              : "bg-white text-lobster-dark border-lobster-border hover:bg-lobster-surface"
+                              ? "bg-lobster-primary text-white shadow-lg"
+                              : "bg-white text-lobster-dark border-2 border-lobster-border hover:bg-lobster-soft-hover hover:text-white"
                           )}
                         >
                           {label}
@@ -518,8 +518,8 @@ export default function RegisterServicePage() {
 
                 {/* Success Message */}
                 {submitSuccess && (
-                  <div className="mb-6 bg-green-50 border-2 border-green-200 rounded-xl p-4">
-                    <div className="flex items-center space-x-2 text-green-700">
+                  <div className="mb-6 bg-[#0000ff]/10 border-2 border-[#0000ff]/20 rounded-xl p-4">
+                    <div className="flex items-center space-x-2 text-[#0000ff]">
                       <CheckCircle className="w-5 h-5" />
                       <p className="font-semibold">Service registered successfully!</p>
                     </div>
@@ -574,8 +574,8 @@ export default function RegisterServicePage() {
                         {SERVICE_TYPE_LABELS[formData.serviceType]}
                       </span>
                     </div>
-                    <div className="flex items-center space-x-1 text-green-600">
-                      <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    <div className="flex items-center space-x-1 text-[#0000ff]">
+                      <span className="w-2 h-2 bg-[#0000ff] rounded-full" />
                       <span className="text-xs font-medium">Active</span>
                     </div>
                   </div>

@@ -36,7 +36,7 @@ export function ConnectWallet() {
         </button>
 
         {showDropdown && (
-          <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-lobster-border overflow-hidden z-50">
+          <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-[#E7E1EA] overflow-hidden z-50 text-[#1C1B1F]">
             <div className="py-1">
               {connectors.map((connector) => (
                 <button
@@ -45,10 +45,10 @@ export function ConnectWallet() {
                     connect({ connector });
                     setShowDropdown(false);
                   }}
-                  className="w-full px-4 py-3 text-left hover:bg-lobster-surface transition-colors duration-200 flex items-center space-x-3"
+                  className="w-full px-4 py-3 text-left hover:bg-[#F7F5F9] transition-colors duration-200 flex items-center space-x-3"
                 >
                   <Wallet className="w-5 h-5 text-lobster-primary" />
-                  <span className="font-medium text-lobster-dark">{connector.name}</span>
+                  <span className="font-medium text-[#1C1B1F]">{connector.name}</span>
                 </button>
               ))}
             </div>
@@ -62,28 +62,28 @@ export function ConnectWallet() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="flex items-center space-x-3 px-4 py-2 bg-white border-2 border-lobster-border rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
+        className="flex items-center space-x-3 px-4 py-2 bg-white border-2 border-[#E7E1EA] rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-200 text-[#1C1B1F]"
       >
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-gradient-lobster rounded-full flex items-center justify-center">
             <Wallet className="w-5 h-5 text-white" />
           </div>
-          <span className="font-medium text-lobster-dark">
+          <span className="font-medium text-[#1C1B1F]">
             {formatAddress(address || "")}
           </span>
         </div>
-        <ChevronDown className="w-4 h-4 text-lobster-text" />
+        <ChevronDown className="w-4 h-4 text-[#5E5A6A]" />
       </button>
 
       {showDropdown && (
-        <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-lobster-border overflow-hidden z-50">
-          <div className="p-4 border-b border-lobster-border">
-            <p className="text-xs text-lobster-text mb-2">Connected Address</p>
-            <p className="font-mono text-sm text-lobster-dark">{address}</p>
+        <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-[#E7E1EA] overflow-hidden z-50 text-[#1C1B1F]">
+          <div className="p-4 border-b border-[#E7E1EA]">
+            <p className="text-xs text-[#5E5A6A] mb-2">Connected Address</p>
+            <p className="font-mono text-sm text-[#1C1B1F]">{address}</p>
           </div>
 
-          <div className="p-4 border-b border-lobster-border">
-            <BalanceDisplay address={address} />
+          <div className="p-4 border-b border-[#E7E1EA]">
+            <BalanceDisplay address={address} variant="light" />
           </div>
 
           <div className="py-1">
@@ -92,7 +92,7 @@ export function ConnectWallet() {
                 disconnect();
                 setShowDropdown(false);
               }}
-              className="w-full px-4 py-3 text-left hover:bg-lobster-surface transition-colors duration-200 flex items-center space-x-3 text-red-600 hover:text-red-700"
+              className="w-full px-4 py-3 text-left hover:bg-[#F7F5F9] transition-colors duration-200 flex items-center space-x-3 text-[#B3261E] hover:text-[#8F2017]"
             >
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Disconnect</span>

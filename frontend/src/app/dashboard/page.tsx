@@ -114,8 +114,8 @@ export default function DashboardPage() {
           {/* Total Spent */}
           <div className="card">
             <div className="flex items-center space-x-3 mb-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
+              <div className="w-10 h-10 bg-lobster-primary/10 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-lobster-primary" />
               </div>
               <h3 className="font-semibold text-lobster-text">Total Spent</h3>
             </div>
@@ -126,8 +126,8 @@ export default function DashboardPage() {
           {/* Services Used */}
           <div className="card">
             <div className="flex items-center space-x-3 mb-3">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <Activity className="w-6 h-6 text-green-600" />
+              <div className="w-10 h-10 bg-[#0000ff]/10 rounded-lg flex items-center justify-center">
+                <Activity className="w-6 h-6 text-[#0000ff]" />
               </div>
               <h3 className="font-semibold text-lobster-text">Services Used</h3>
             </div>

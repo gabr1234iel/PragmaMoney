@@ -18,7 +18,7 @@ export function TransactionHistory() {
   const getStatusIcon = (status: Transaction["status"]) => {
     switch (status) {
       case "success":
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 text-[#0000ff]" />;
       case "pending":
         return <Clock className="w-4 h-4 text-yellow-600 animate-pulse" />;
       case "failed":
@@ -32,8 +32,8 @@ export function TransactionHistory() {
         className={cn(
           "badge text-xs",
           method === "x402"
-            ? "bg-purple-100 text-purple-800 border border-purple-200"
-            : "bg-blue-100 text-blue-800 border border-blue-200"
+            ? "bg-blue-100 text-blue-800 border border-blue-200"
+            : "bg-lobster-primary/10 text-lobster-primary border border-lobster-primary/20"
         )}
       >
         {method === "x402" ? "x402" : "Gateway"}
@@ -94,7 +94,7 @@ export function TransactionHistory() {
               {visibleTransactions.map((tx) => (
                 <tr
                   key={tx.id}
-                  className="hover:bg-lobster-surface/50 transition-colors duration-150"
+                  className="hover:bg-lobster-soft transition-colors duration-150"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-lobster-text">
                     {formatRelativeTime(tx.date)}

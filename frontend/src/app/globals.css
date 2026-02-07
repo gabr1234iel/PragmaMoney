@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 @tailwind base;
@@ -11,7 +11,9 @@
   }
 
   body {
-    @apply font-body text-lobster-dark bg-lobster-bg antialiased;
+    @apply font-body text-pragma-text bg-pragma-dark antialiased selection:bg-pragma-primary selection:text-white;
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.pragma-primary') theme('colors.pragma-surface');
   }
 
   h1,
@@ -22,9 +24,59 @@
   h6 {
     @apply font-display;
   }
+
+  /* Force AsciiRenderer (which uses tables) to use our font */
+  table {
+    font-family: 'Courier Prime', monospace !important;
+  }
+
+  /* Ensure readable text on light surfaces (same element) */
+  .bg-white.text-lobster-dark {
+    @apply text-black;
+  }
+  .bg-white.text-lobster-text {
+    @apply text-slate-600;
+  }
+
+  /* Ensure readable text on red gradient surfaces */
+  .bg-gradient-lobster .text-lobster-dark,
+  .bg-gradient-lobster.text-lobster-dark {
+    @apply text-white;
+  }
+  .bg-gradient-lobster .text-lobster-text,
+  .bg-gradient-lobster.text-lobster-text {
+    @apply text-white/80;
+  }
+  .bg-gradient-lobster .text-lobster-primary,
+  .bg-gradient-lobster.text-lobster-primary {
+    @apply text-white;
+  }
+
+  /* Light cards default to dark text */
+  .card,
+  .card-hover {
+    @apply text-slate-900;
+  }
+  .card .text-lobster-dark,
+  .card-hover .text-lobster-dark {
+    @apply text-slate-900;
+  }
+  .card .text-lobster-text,
+  .card-hover .text-lobster-text {
+    @apply text-slate-600;
+  }
+
+  /* Dark surface blocks should force light text */
+  .bg-lobster-surface .text-lobster-dark {
+    @apply text-white;
+  }
+  .bg-lobster-surface .text-lobster-text {
+    @apply text-slate-300;
+  }
 }
 
 @layer utilities {
+
   /* Custom scrollbar styling */
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
@@ -32,21 +84,20 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-lobster-surface rounded-full;
+    @apply bg-pragma-surface rounded-full;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-lobster-primary rounded-full hover:bg-lobster-hover;
+    @apply bg-pragma-primary rounded-full hover:bg-pragma-accent;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-lobster-accent;
+    @apply bg-pragma-accent;
   }
 
-  /* Apply to body by default */
-  body {
-    scrollbar-width: thin;
-    scrollbar-color: theme('colors.lobster-primary') theme('colors.lobster-surface');
+  /* Override dark hover surfaces to use lobster hover instead */
+  .hover\:bg-lobster-surface:hover {
+    background-color: theme('colors.lobster-hover') !important;
   }
 }
 
@@ -68,7 +119,7 @@
   }
 
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl border-2 border-lobster-border bg-white text-lobster-dark placeholder:text-lobster-text/40 focus:outline-none focus:ring-2 focus:ring-lobster-primary focus:border-transparent transition-all duration-200;
+    @apply w-full px-4 py-3 rounded-xl border-2 border-lobster-border bg-white text-black placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-lobster-primary focus:border-transparent transition-all duration-200;
   }
 
   .badge {
@@ -85,6 +136,7 @@
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }

@@ -227,7 +227,7 @@ function PlaygroundContent() {
                               className={`w-full px-4 py-3 text-left transition-colors duration-200 ${
                                 isSelected
                                   ? "bg-lobster-primary/10 text-lobster-primary font-medium"
-                                  : "text-lobster-dark hover:bg-lobster-surface"
+                                  : "text-lobster-dark hover:bg-lobster-hover"
                               }`}
                             >
                               {getServiceLabel(service)}

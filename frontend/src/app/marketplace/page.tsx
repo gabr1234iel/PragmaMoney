@@ -71,7 +71,7 @@ export default function MarketplacePage() {
               "px-6 py-3 rounded-xl font-display text-lg font-semibold transition-all duration-200",
               activeTab === "services"
                 ? "bg-lobster-primary text-white shadow-lg"
-                : "bg-white text-lobster-dark border-2 border-lobster-border hover:bg-lobster-surface"
+                : "bg-white text-lobster-dark border-2 border-lobster-border hover:bg-lobster-soft-hover hover:text-lobster-dark"
             )}
           >
             Services
@@ -81,8 +81,8 @@ export default function MarketplacePage() {
             className={cn(
               "px-6 py-3 rounded-xl font-display text-lg font-semibold transition-all duration-200",
               activeTab === "agents"
-                ? "bg-purple-600 text-white shadow-lg"
-                : "bg-white text-lobster-dark border-2 border-lobster-border hover:bg-lobster-surface"
+                ? "bg-lobster-primary text-white shadow-lg"
+                : "bg-white text-lobster-dark border-2 border-lobster-border hover:bg-lobster-soft-hover hover:text-lobster-dark"
             )}
           >
             Agents
@@ -92,7 +92,7 @@ export default function MarketplacePage() {
         {/* Search */}
         <div className="mb-8">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-lobster-text" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-lobster-primary" />
             <input
               type="text"
               placeholder={activeTab === "services"
@@ -115,7 +115,7 @@ export default function MarketplacePage() {
                 "px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all duration-200",
                 selectedType === "all"
                   ? "bg-lobster-primary text-white shadow-md"
-                  : "bg-white text-lobster-dark border-2 border-lobster-border hover:bg-lobster-surface"
+                  : "bg-white text-lobster-dark border-2 border-lobster-border hover:bg-lobster-soft-hover hover:text-lobster-dark"
               )}
             >
               All Services
@@ -128,7 +128,7 @@ export default function MarketplacePage() {
                   "px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all duration-200",
                   selectedType === Number(key)
                     ? "bg-lobster-primary text-white shadow-md"
-                    : "bg-white text-lobster-dark border-2 border-lobster-border hover:bg-lobster-surface"
+                    : "bg-white text-lobster-dark border-2 border-lobster-border hover:bg-lobster-soft-hover hover:text-lobster-dark"
                 )}
               >
                 {label}
@@ -184,7 +184,7 @@ export default function MarketplacePage() {
             {!isLoading && filteredServices.length === 0 && (
               <div className="card text-center py-16">
                 <div className="w-24 h-24 bg-lobster-surface rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Search className="w-12 h-12 text-lobster-text" />
+                  <Search className="w-12 h-12 text-lobster-primary" />
                 </div>
                 <h3 className="font-display text-2xl font-bold text-lobster-dark mb-3">
                   No Services Found
@@ -239,8 +239,8 @@ export default function MarketplacePage() {
             {/* Empty State */}
             {!agentsLoading && filteredAgents.length === 0 && (
               <div className="card text-center py-16">
-                <div className="w-24 h-24 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Bot className="w-12 h-12 text-purple-400" />
+                <div className="w-24 h-24 bg-lobster-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Bot className="w-12 h-12 text-lobster-primary" />
                 </div>
                 <h3 className="font-display text-2xl font-bold text-lobster-dark mb-3">
                   No Agents Found

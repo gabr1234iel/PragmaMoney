@@ -91,7 +91,7 @@ export function PaymentConfirm({
         <div className="p-6 space-y-6">
           {success ? (
             <div className="text-center py-8">
-              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+              <CheckCircle className="w-16 h-16 text-[#0000ff] mx-auto mb-4" />
               <h3 className="font-display text-xl font-semibold text-lobster-dark mb-2">
                 Payment Successful!
               </h3>

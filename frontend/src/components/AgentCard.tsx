@@ -30,17 +30,17 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-2">
-            <Bot className="w-5 h-5 text-purple-600" />
+            <Bot className="w-5 h-5 text-lobster-primary" />
             <h3 className="font-display text-xl font-semibold text-lobster-dark">
               {agent.name}
             </h3>
           </div>
-          <span className="badge border bg-purple-100 text-purple-800 border-purple-200">
+          <span className="badge border bg-lobster-primary/10 text-lobster-primary border-lobster-primary/20">
             Agent
           </span>
         </div>
         {x402Support && (
-          <span className="badge border bg-green-100 text-green-800 border-green-200">
+          <span className="badge border bg-[#0000ff]/10 text-[#0000ff] border-[#0000ff]/20">
             x402
           </span>
         )}
@@ -77,7 +77,7 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
       <div className="flex justify-between items-center">
         <div>
           <p className="text-xs text-lobster-text mb-1">Agent ID</p>
-          <p className="font-display text-lg font-bold text-purple-700">
+          <p className="font-display text-lg font-bold text-lobster-primary">
             #{agent.agentId.toString()}
           </p>
         </div>
@@ -86,21 +86,21 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); window.location.href = `/pool/${agent.poolAddress}`; }}
-                className="flex items-center space-x-1 px-3 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-200 text-sm"
+                className="flex items-center space-x-1 px-3 py-2 bg-lobster-primary text-white rounded-xl hover:bg-lobster-hover transition-all duration-200 text-sm"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 <span className="font-medium">View</span>
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); window.location.href = `/pool/${agent.poolAddress}`; }}
-                className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 text-sm"
+                className="flex items-center space-x-1 px-3 py-2 bg-[#0000ff] text-white rounded-xl hover:bg-[#0000ff]/80 transition-all duration-200 text-sm"
               >
                 <DollarSign className="w-3.5 h-3.5" />
                 <span className="font-medium">Fund</span>
               </button>
             </>
           ) : (
-            <button className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-200 group-hover:scale-105">
+            <button className="flex items-center space-x-2 px-4 py-2 bg-lobster-primary text-white rounded-xl hover:bg-lobster-hover transition-all duration-200 group-hover:scale-105">
               <ExternalLink className="w-4 h-4" />
               <span className="font-medium">View</span>
             </button>

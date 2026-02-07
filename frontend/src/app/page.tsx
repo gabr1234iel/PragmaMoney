@@ -1,257 +1,153 @@
+"use client";
+
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Box, CheckCircle, Layers, Shield, Terminal, Zap } from "lucide-react";
+import SplitLayout from "@/components/SplitLayout";
+import TopographicFooter from "@/components/TopographicFooter";
 
 export default function HomePage() {
   return (
-    <div className="relative">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-lobster text-white">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-        {/* Scattered mascots */}
-        <div className="absolute right-12 top-16 pointer-events-none hidden lg:block rotate-12 drop-shadow-lg">
-          <Image src="/picture.png" alt="" width={100} height={100} priority />
-        </div>
-        <div className="absolute right-48 bottom-20 pointer-events-none hidden lg:block -rotate-6 drop-shadow-lg">
-          <Image src="/picture.png" alt="" width={72} height={72} priority />
-        </div>
-        <div className="absolute right-[30%] top-12 pointer-events-none hidden xl:block rotate-[-15deg] drop-shadow-lg">
-          <Image src="/picture.png" alt="" width={56} height={56} />
-        </div>
-        <div className="absolute left-[60%] bottom-10 pointer-events-none hidden lg:block rotate-[20deg] drop-shadow-lg">
-          <Image src="/picture.png" alt="" width={64} height={64} />
-        </div>
-        <div className="relative max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-32 lg:py-48">
-          <div className="max-w-4xl">
-            <h1 className="font-display text-6xl sm:text-7xl lg:text-8xl font-bold mb-8 tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-1000">
-              PragmaMoney
-            </h1>
-            <p className="text-2xl sm:text-3xl lg:text-4xl mb-12 opacity-95 font-light leading-relaxed animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100">
-              Payment infrastructure for autonomous AI agents
-            </p>
-            <p className="text-lg sm:text-xl mb-16 opacity-90 max-w-2xl leading-relaxed animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-200">
-              x402 protocol on Base. Constrained wallets with spending policies. Instant USDC settlements.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
-              <Link
-                href="/marketplace"
-                className="inline-flex items-center justify-center gap-3 bg-white text-lobster-primary px-10 py-5 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 ease-in-out"
-              >
-                <span>Explore Marketplace</span>
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link
-                href="/register"
-                className="inline-flex items-center justify-center gap-3 bg-transparent border-2 border-white text-white px-10 py-5 rounded-xl font-semibold text-lg hover:bg-white/10 transition-all duration-200 ease-in-out"
-              >
-                <span>Register a Service</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+    <SplitLayout>
+      <div className="px-6 py-20 lg:p-24 selection:bg-pragma-primary selection:text-white">
 
-      {/* Value Proposition */}
-      <section className="py-32 bg-white">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="grid lg:grid-cols-2 gap-20 items-center">
-            <div>
-              <h2 className="font-display text-5xl sm:text-6xl font-bold text-lobster-dark mb-8 leading-tight">
-                Built for the agent economy
-              </h2>
-              <p className="text-xl text-lobster-text leading-relaxed mb-8">
-                AI agents need to transact with each other and with services. PragmaMoney provides the payment rails.
-              </p>
-              <p className="text-xl text-lobster-text leading-relaxed">
-                Register your API, set your price, and start earning. No invoices. No delays. Just automatic payments via x402.
-              </p>
-            </div>
-            <div className="space-y-10">
-              <div className="border-l-4 border-lobster-primary pl-8">
-                <h3 className="font-display text-2xl font-bold text-lobster-dark mb-3">
-                  Instant settlements
-                </h3>
-                <p className="text-lg text-lobster-text leading-relaxed">
-                  Payments settle on-chain in real-time. USDC transfers happen automatically with every API call.
-                </p>
-              </div>
-              <div className="border-l-4 border-lobster-primary pl-8">
-                <h3 className="font-display text-2xl font-bold text-lobster-dark mb-3">
-                  Constrained wallets
-                </h3>
-                <p className="text-lg text-lobster-text leading-relaxed">
-                  ERC-4337 smart accounts with spending policies. Set daily limits, approved targets, and token allowances.
-                </p>
-              </div>
-              <div className="border-l-4 border-lobster-primary pl-8">
-                <h3 className="font-display text-2xl font-bold text-lobster-dark mb-3">
-                  Base blockchain
-                </h3>
-                <p className="text-lg text-lobster-text leading-relaxed">
-                  Fast, cheap transactions with native x402 support. Built on Coinbase's Layer 2.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-32 bg-lobster-bg">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="text-center mb-20">
-            <h2 className="font-display text-5xl sm:text-6xl font-bold text-lobster-dark mb-6">
-              How it works
-            </h2>
-            <p className="text-xl text-lobster-text max-w-2xl mx-auto leading-relaxed">
-              Three steps to start earning or spending in the agent economy
-            </p>
+        {/* HERO SECTION */}
+        <section className="mb-40">
+          <div className="inline-flex items-center gap-2 mb-12 border-b border-pragma-primary/20 pb-2">
+            <span className="w-2 h-2 bg-pragma-primary animate-pulse" />
+            <span className="font-mono text-sm tracking-widest text-pragma-primary uppercase">Agent Economy Live</span>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-12">
-            <div className="bg-white rounded-2xl p-10 hover:shadow-xl transition-all duration-200 ease-in-out">
-              <div className="flex items-center justify-center w-14 h-14 bg-gradient-lobster rounded-xl mb-8">
-                <span className="material-icons text-4xl text-white">app_registration</span>
-              </div>
-              <div className="text-6xl font-display font-bold text-lobster-border mb-6">01</div>
-              <h3 className="font-display text-2xl font-bold text-lobster-dark mb-4">
-                Register your service
-              </h3>
-              <p className="text-lg text-lobster-text leading-relaxed">
-                Set your price per call and endpoint. Deploy to the ServiceRegistry contract on Base Sepolia.
-              </p>
-            </div>
+          <h1 className="font-sans text-7xl sm:text-8xl lg:text-9xl font-bold tracking-tighter leading-[0.85] mb-12 text-white">
+            PRAGMA<br />
+            <span className="text-pragma-primary">MONEY</span>
+          </h1>
 
-            <div className="bg-white rounded-2xl p-10 hover:shadow-xl transition-all duration-200 ease-in-out">
-              <div className="flex items-center justify-center w-14 h-14 bg-gradient-lobster rounded-xl mb-8">
-                <span className="material-icons text-4xl text-white">sync_alt</span>
-              </div>
-              <div className="text-6xl font-display font-bold text-lobster-border mb-6">02</div>
-              <h3 className="font-display text-2xl font-bold text-lobster-dark mb-4">
-                Payments flow automatically
-              </h3>
-              <p className="text-lg text-lobster-text leading-relaxed">
-                The x402 protocol handles everything. Callers pay with signed messages. No manual invoicing.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl p-10 hover:shadow-xl transition-all duration-200 ease-in-out">
-              <div className="flex items-center justify-center w-14 h-14 bg-gradient-lobster rounded-xl mb-8">
-                <span className="material-icons text-4xl text-white">account_balance_wallet</span>
-              </div>
-              <div className="text-6xl font-display font-bold text-lobster-border mb-6">03</div>
-              <h3 className="font-display text-2xl font-bold text-lobster-dark mb-4">
-                Receive USDC instantly
-              </h3>
-              <p className="text-lg text-lobster-text leading-relaxed">
-                Track earnings in real-time on your dashboard. On-chain transparency with every transaction.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section className="py-32 bg-white">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="text-center mb-20">
-            <h2 className="font-display text-5xl sm:text-6xl font-bold text-lobster-dark mb-6">
-              Platform features
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-12">
-            <div className="space-y-6">
-              <span className="material-icons text-5xl text-lobster-primary">security</span>
-              <h3 className="font-display text-3xl font-bold text-lobster-dark">
-                Spending policies
-              </h3>
-              <p className="text-lg text-lobster-text leading-relaxed">
-                Agent wallets with programmable constraints. Define daily spend limits, approved targets, and allowed tokens. Safe autonomous spending enforced at the smart contract level.
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <span className="material-icons text-5xl text-lobster-primary">inventory_2</span>
-              <h3 className="font-display text-3xl font-bold text-lobster-dark">
-                ERC-4626 agent pools
-              </h3>
-              <p className="text-lg text-lobster-text leading-relaxed">
-                Investors fund agent operations through tokenized vaults. Daily withdrawal caps and vesting schedules protect capital. Agents spend from the pool with policy enforcement.
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <span className="material-icons text-5xl text-lobster-primary">api</span>
-              <h3 className="font-display text-3xl font-bold text-lobster-dark">
-                Service registry
-              </h3>
-              <p className="text-lg text-lobster-text leading-relaxed">
-                On-chain directory of APIs, compute resources, storage, and AI agents. Register any service type with custom pricing. Usage tracking and revenue analytics built in.
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <span className="material-icons text-5xl text-lobster-primary">verified_user</span>
-              <h3 className="font-display text-3xl font-bold text-lobster-dark">
-                ERC-4337 compatible
-              </h3>
-              <p className="text-lg text-lobster-text leading-relaxed">
-                Account abstraction for smart contract wallets. Gasless transactions via paymasters. Programmable spending rules enforced during UserOp validation.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Protocol Details */}
-      <section className="py-32 bg-lobster-dark text-white">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="max-w-4xl">
-            <h2 className="font-display text-5xl sm:text-6xl font-bold mb-8 leading-tight">
-              Two payment directions
-            </h2>
-            <div className="space-y-8 text-lg leading-relaxed opacity-90">
-              <p>
-                <span className="font-bold text-lobster-secondary">Inbound payments:</span> End users or other agents pay your service via x402 protocol. Signed EIP-3009 messages enable gasless USDC transfers. The proxy verifies payment and returns your API response.
-              </p>
-              <p>
-                <span className="font-bold text-lobster-secondary">Outbound payments:</span> Your agent spends from its constrained wallet. UserOps go through EntryPoint validation where spending policies are enforced. The gateway handles on-chain settlement and provides a paymentId for the downstream service.
-              </p>
-              <p>
-                <span className="font-bold text-lobster-secondary">Agent-to-agent:</span> One agent's outbound payment becomes another agent's inbound revenue. The gateway and x402 proxy work together to route USDC and verify both sides of the transaction.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-32 bg-gradient-lobster text-white">
-        <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center">
-          <h2 className="font-display text-5xl sm:text-6xl font-bold mb-8 leading-tight">
-            Ready to start building?
-          </h2>
-          <p className="text-xl sm:text-2xl mb-12 opacity-95 leading-relaxed">
-            Register a service, create a constrained wallet, or explore the marketplace.
+          <p className="font-mono text-lg text-white/60 max-w-xl leading-relaxed mb-16">
+            // PAYMENT INFRASTRUCTURE FOR AUTONOMOUS AI AGENTS.<br />
+            // X402 PROTOCOL ON BASE.<br />
+            // CONSTRAINED WALLETS & INSTANT SETTLEMENT.
           </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <Link
-              href="/marketplace"
-              className="inline-flex items-center justify-center gap-3 bg-white text-lobster-primary px-10 py-5 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 ease-in-out"
-            >
-              <span>Explore Marketplace</span>
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-            <Link
-              href="/playground"
-              className="inline-flex items-center justify-center gap-3 bg-transparent border-2 border-white text-white px-10 py-5 rounded-xl font-semibold text-lg hover:bg-white/10 transition-all duration-200 ease-in-out"
-            >
-              <span>Try the Playground</span>
+
+          <div className="flex flex-col sm:flex-row gap-6">
+            <Link href="/marketplace" className="group flex items-center gap-4 text-2xl font-bold text-white hover:text-pragma-primary transition-colors">
+              [ EXPLORE MARKETPLACE ]
+              <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
             </Link>
           </div>
-        </div>
-      </section>
-    </div>
+        </section>
+
+        {/* LOGO GRID */}
+        <section className="mb-40 border-y border-white/10 py-12">
+          <p className="font-mono text-xs text-white/40 mb-8 uppercase tracking-widest">Trusted Infrastructure</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+            {/* Placeholders for logos, using text for now as per "Typography" constraint, but styled as logos */}
+            {["BASE", "COINBASE", "OPENAI", "ETHEREUM"].map((logo) => (
+              <div key={logo} className="h-12 flex items-center justify-start text-xl font-bold font-sans tracking-tight text-white">{logo}</div>
+            ))}
+          </div>
+        </section>
+
+        {/* VALUE PROPOSITION: HIGH PERFORMANCE DATA */}
+        <section className="mb-40">
+          <h2 className="font-sans text-5xl font-bold mb-20 tracking-tighter">
+            INFRASTRUCTURE <br />
+            <span className="text-white/40">FOR MACHINES.</span>
+          </h2>
+
+          <div className="space-y-0">
+            {[
+              { id: "01", title: "Instant Settlements", desc: "Payments settle on-chain in real-time. USDC transfers happen automatically with every API call." },
+              { id: "02", title: "Constrained Wallets", desc: "ERC-4337 smart accounts with spending policies. Set daily limits, approved targets, and allowances." },
+              { id: "03", title: "Base Blockchain", desc: "Fast, cheap transactions with native x402 support. Built on Coinbase's L2." }
+            ].map((item) => (
+              <div key={item.id} className="group border-t border-white/10 py-12 flex flex-col md:flex-row gap-8 md:gap-20 hover:bg-white/5 transition-colors px-4 -mx-4">
+                <span className="font-mono text-pragma-primary text-xl">{item.id}</span>
+                <div className="flex-1">
+                  <h3 className="font-sans text-3xl font-bold mb-4">{item.title}</h3>
+                  <p className="font-mono text-white/60 leading-relaxed max-w-md">{item.desc}</p>
+                </div>
+                <ArrowRight className="w-8 h-8 opacity-0 group-hover:opacity-100 -rotate-45 group-hover:rotate-0 transition-all" />
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-white/10" />
+        </section>
+
+        {/* HOW IT WORKS */}
+        <section className="mb-40">
+          <div className="flex items-end justify-between mb-20">
+            <h2 className="font-sans text-5xl font-bold tracking-tighter">PROTOCOL <br /> FLOW</h2>
+            <div className="hidden md:block font-mono text-xs text-right text-white/40">
+              SYNC_STATUS: ACTIVE<br />
+              LATENCY: 12ms
+            </div>
+          </div>
+
+          <div className="grid gap-12">
+            {[
+              { step: "01", label: "REGISTER", text: "Set price per call. Deploy to ServiceRegistry on Base Sepolia." },
+              { step: "02", label: "AUTOMATE", text: "x402 protocol handles signing. No manual invoicing. Pure machine-to-machine." },
+              { step: "03", label: "RECEIVE", text: "Real-time USDC settlement. Transparent on-chain reporting." }
+            ].map((item) => (
+              <div key={item.step} className="relative pl-12 border-l border-white/10 py-4">
+                <div className="absolute left-[-5px] top-4 w-2.5 h-2.5 bg-pragma-dark border border-pragma-primary rounded-full" />
+                <div className="mb-2 font-mono text-pragma-primary text-sm tracking-widest">{item.step} // {item.label}</div>
+                <p className="font-sans text-3xl font-medium leading-tight">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* PLATFORM FEATURES */}
+        <section className="mb-40">
+          <h2 className="font-sans text-5xl font-bold mb-16 tracking-tighter text-right">
+            SYSTEM <br /> CAPABILITIES
+          </h2>
+
+          <div className="grid md:grid-cols-2 gap-x-12 gap-y-24">
+            {[
+              { icon: Shield, title: "Spending Policies", desc: "Programmable constraints. Define daily limits and allowed tokens." },
+              { icon: Layers, title: "Agent Pools", desc: "Tokenized vaults for investor funding with vesting schedules." },
+              { icon: Terminal, title: "Service Registry", desc: "On-chain directory of APIs and compute resources." },
+              { icon: CheckCircle, title: "ERC-4337", desc: "Account abstraction with gasless Paymaster flows." }
+            ].map((feature, i) => (
+              <div key={i}>
+                <feature.icon className="w-12 h-12 text-pragma-primary mb-8" strokeWidth={1} />
+                <h3 className="font-mono text-xl font-bold mb-4 uppercase">{feature.title}</h3>
+                <p className="text-white/60 leading-relaxed font-mono text-sm border-l-2 border-white/10 pl-4">
+                  {feature.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* PROTOCOL DETAILS (TEXT BLOCK) */}
+        <section className="mb-20">
+          <div className="bg-white/5 p-8 md:p-12 border border-white/10">
+            <h3 className="font-mono text-pragma-primary mb-8 text-sm uppercase tracking-widest">Transaction Routing</h3>
+            <div className="space-y-8">
+              <div>
+                <h4 className="font-sans text-2xl font-bold mb-2">Inbound</h4>
+                <p className="text-white/60 font-mono text-sm">End users pay via x402. Signed EIP-3009 messages enable gasless USDC transfers.</p>
+              </div>
+              <div>
+                <h4 className="font-sans text-2xl font-bold mb-2">Outbound</h4>
+                <p className="text-white/60 font-mono text-sm">Agent spends from constrained wallet. UserOps validated by EntryPoint.</p>
+              </div>
+              <div>
+                <h4 className="font-sans text-2xl font-bold mb-2">Agent-to-Agent</h4>
+                <p className="text-white/60 font-mono text-sm">Seamless routing. One agent's payment is another's revenue.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <TopographicFooter />
+    </SplitLayout>
   );
 }
+
+
