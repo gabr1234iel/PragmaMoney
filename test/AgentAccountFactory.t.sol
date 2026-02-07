@@ -11,10 +11,7 @@ contract AgentAccountFactoryTest is Test {
     AgentAccountFactory public factory;
 
     address public constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
-    bytes32 public constant ACTIONS_ROOT = keccak256("default-actions-root");
-
     address public owner = makeAddr("owner");
-    address public admin = makeAddr("admin");
     address public operator = makeAddr("operator");
 
     bytes32 public constant AGENT_ID_1 = keccak256("agent-1");
@@ -26,7 +23,7 @@ contract AgentAccountFactoryTest is Test {
         expiresAt = block.timestamp + 30 days;
 
         implementation = new AgentSmartAccount();
-        factory = new AgentAccountFactory(address(implementation), ENTRY_POINT, ACTIONS_ROOT);
+        factory = new AgentAccountFactory(address(implementation), ENTRY_POINT);
 
         vm.label(address(implementation), "Implementation");
         vm.label(address(factory), "Factory");
@@ -37,35 +34,30 @@ contract AgentAccountFactoryTest is Test {
     function test_Constructor_SetsImmutables() public view {
         assertEq(factory.implementation(), address(implementation));
         assertEq(address(factory.entryPoint()), ENTRY_POINT);
-        assertEq(factory.defaultActionsRoot(), ACTIONS_ROOT);
     }
 
     function test_Constructor_RevertZeroImplementation() public {
         vm.expectRevert(AgentAccountFactory.ZeroAddress.selector);
-        new AgentAccountFactory(address(0), ENTRY_POINT, ACTIONS_ROOT);
+        new AgentAccountFactory(address(0), ENTRY_POINT);
     }
 
     function test_Constructor_RevertZeroEntryPoint() public {
         vm.expectRevert(AgentAccountFactory.ZeroAddress.selector);
-        new AgentAccountFactory(address(implementation), address(0), ACTIONS_ROOT);
+        new AgentAccountFactory(address(implementation), address(0));
     }
 
     // ==================== createAccount ====================
 
     function test_CreateAccount_DeploysAndInitializes() public {
-        address account = factory.createAccount(
-            owner, admin, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt
-        );
+        address account = factory.createAccount(owner, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
 
         assertTrue(account != address(0));
         assertTrue(account.code.length > 0);
 
         AgentSmartAccount acct = AgentSmartAccount(payable(account));
         assertEq(acct.owner(), owner);
-        assertEq(acct.admin(), admin);
         assertEq(acct.operator(), operator);
         assertEq(acct.agentId(), AGENT_ID_1);
-        assertEq(acct.getActionsRoot(), ACTIONS_ROOT);
 
         SpendingPolicyLib.Policy memory pol = acct.getPolicy();
         assertEq(pol.dailyLimit, DAILY_LIMIT);
@@ -78,23 +70,19 @@ contract AgentAccountFactoryTest is Test {
         address predicted = factory.getAddress(owner, AGENT_ID_1);
         emit AgentAccountFactory.AccountCreated(predicted, owner, operator, AGENT_ID_1);
 
-        factory.createAccount(owner, admin, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
+        factory.createAccount(owner, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
     }
 
     function test_CreateAccount_DuplicateReverts() public {
-        factory.createAccount(owner, admin, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
+        factory.createAccount(owner, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
 
         vm.expectRevert(); // ERC1167FailedCreateClone
-        factory.createAccount(owner, admin, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
+        factory.createAccount(owner, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
     }
 
     function test_CreateAccount_DifferentAgentIds() public {
-        address account1 = factory.createAccount(
-            owner, admin, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt
-        );
-        address account2 = factory.createAccount(
-            owner, admin, operator, AGENT_ID_2, DAILY_LIMIT, expiresAt
-        );
+        address account1 = factory.createAccount(owner, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
+        address account2 = factory.createAccount(owner, operator, AGENT_ID_2, DAILY_LIMIT, expiresAt);
 
         assertTrue(account1 != account2);
 
@@ -105,12 +93,8 @@ contract AgentAccountFactoryTest is Test {
     function test_CreateAccount_DifferentOwnersSameAgentId() public {
         address owner2 = makeAddr("owner2");
 
-        address account1 = factory.createAccount(
-            owner, admin, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt
-        );
-        address account2 = factory.createAccount(
-            owner2, admin, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt
-        );
+        address account1 = factory.createAccount(owner, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
+        address account2 = factory.createAccount(owner2, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
 
         assertTrue(account1 != account2);
     }
@@ -119,9 +103,7 @@ contract AgentAccountFactoryTest is Test {
 
     function test_GetAddress_PredictCorrectly() public {
         address predicted = factory.getAddress(owner, AGENT_ID_1);
-        address actual = factory.createAccount(
-            owner, admin, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt
-        );
+        address actual = factory.createAccount(owner, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
         assertEq(predicted, actual);
     }
 
@@ -141,7 +123,6 @@ contract AgentAccountFactoryTest is Test {
 
     function testFuzz_CreateAccount_VariousParams(
         address _owner,
-        address _admin,
         address _operator,
         bytes32 _agentId,
         uint256 _dailyLimit,
@@ -149,23 +130,18 @@ contract AgentAccountFactoryTest is Test {
     ) public {
         // Skip precompile addresses and zero address
         vm.assume(_owner != address(0));
-        vm.assume(_admin != address(0));
         vm.assume(_operator != address(0));
         vm.assume(uint160(_owner) > 10);
-        vm.assume(uint160(_admin) > 10);
         vm.assume(uint160(_operator) > 10);
         vm.assume(_expiresAt > block.timestamp);
 
         address predicted = factory.getAddress(_owner, _agentId);
-        address actual = factory.createAccount(
-            _owner, _admin, _operator, _agentId, _dailyLimit, _expiresAt
-        );
+        address actual = factory.createAccount(_owner, _operator, _agentId, _dailyLimit, _expiresAt);
 
         assertEq(predicted, actual);
 
         AgentSmartAccount acct = AgentSmartAccount(payable(actual));
         assertEq(acct.owner(), _owner);
-        assertEq(acct.admin(), _admin);
         assertEq(acct.operator(), _operator);
         assertEq(acct.agentId(), _agentId);
     }

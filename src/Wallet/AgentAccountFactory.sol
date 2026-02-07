@@ -18,9 +18,6 @@ contract AgentAccountFactory {
     /// @notice The canonical EntryPoint address
     IEntryPoint public immutable entryPoint;
 
-    /// @notice Default Merkle root for allowed actions
-    bytes32 public immutable defaultActionsRoot;
-
     // -- Events --
 
     event AccountCreated(
@@ -39,21 +36,18 @@ contract AgentAccountFactory {
 
     /// @param _implementation Address of the deployed AgentSmartAccount implementation
     /// @param _entryPoint Address of the canonical ERC-4337 EntryPoint
-    /// @param _defaultActionsRoot Merkle root of allowed actions
-    constructor(address _implementation, address _entryPoint, bytes32 _defaultActionsRoot) {
+    constructor(address _implementation, address _entryPoint) {
         if (_implementation == address(0) || _entryPoint == address(0)) {
             revert ZeroAddress();
         }
         implementation = _implementation;
         entryPoint = IEntryPoint(_entryPoint);
-        defaultActionsRoot = _defaultActionsRoot;
     }
 
     // -- External functions --
 
     /// @notice Deploy a new AgentSmartAccount clone
     /// @param owner_ The owner address (controls policy)
-    /// @param admin_ The admin address (controls allowlist root)
     /// @param operator_ The operator address (signs UserOps)
     /// @param agentId_ Unique identifier for the agent
     /// @param dailyLimit_ Maximum daily spending in token base units
@@ -61,7 +55,6 @@ contract AgentAccountFactory {
     /// @return account The address of the newly deployed smart account
     function createAccount(
         address owner_,
-        address admin_,
         address operator_,
         bytes32 agentId_,
         uint256 dailyLimit_,
@@ -75,12 +68,10 @@ contract AgentAccountFactory {
         // Initialize the clone
         AgentSmartAccount(payable(account)).initialize(
             owner_,
-            admin_,
             operator_,
             agentId_,
             dailyLimit_,
-            expiresAt_,
-            defaultActionsRoot
+            expiresAt_
         );
 
         emit AccountCreated(account, owner_, operator_, agentId_);
