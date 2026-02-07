@@ -45,6 +45,12 @@ contract AgentSmartAccount is BaseAccount, Initializable {
     /// @notice Operator address that signs UserOperations
     address public operator;
 
+    /// @notice Factory that deployed this account (set on initialize)
+    address public factory;
+
+    /// @notice Flag indicating this account was initialized via a factory
+    bool public isFactoryAccount;
+
     /// @notice Unique identifier for this agent
     bytes32 public agentId;
 
@@ -119,6 +125,8 @@ contract AgentSmartAccount is BaseAccount, Initializable {
         owner = owner_;
         operator = operator_;
         agentId = agentId_;
+        factory = msg.sender;
+        isFactoryAccount = true;
 
         policy = SpendingPolicyLib.Policy({
             dailyLimit: dailyLimit_,

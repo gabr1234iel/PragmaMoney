@@ -79,5 +79,9 @@ interface IAgentSmartAccount {
     /// @return allowed Whether the token is allowed
     function isTokenAllowed(address token) external view returns (bool allowed);
 
+    /// @notice Flag indicating the account was created via the factory
+    /// @return True if factory-created
+    function isFactoryAccount() external view returns (bool);
+
     // Merkle allowlist removed
 }

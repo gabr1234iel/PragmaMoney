@@ -7,9 +7,12 @@ import {AgentAccountFactory} from "../src/Wallet/AgentAccountFactory.sol";
 import {SpendingPolicyLib} from "../src/Wallet/SpendingPolicyLib.sol";
 import {MockERC20} from "./helpers/MockERC20.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract AgentSmartAccountTest is Test {
+    using SpendingPolicyLib for mapping(address => bool);
+
     AgentSmartAccount public implementation;
     AgentAccountFactory public factory;
     AgentSmartAccount public account;
@@ -29,6 +32,11 @@ contract AgentSmartAccountTest is Test {
 
     address public allowedTarget;
     address public blockedTarget = makeAddr("blockedTarget");
+    mapping(address => bool) private testAllowedTargets;
+
+    function _validateTarget(address target) external view returns (bool) {
+        return testAllowedTargets.validateTarget(target);
+    }
 
     function setUp() public {
         // Generate owner and operator keys
@@ -76,6 +84,8 @@ contract AgentSmartAccountTest is Test {
         assertEq(account.owner(), owner);
         assertEq(account.operator(), operator);
         assertEq(account.agentId(), AGENT_ID);
+        assertEq(account.factory(), address(factory));
+        assertTrue(account.isFactoryAccount());
         SpendingPolicyLib.Policy memory pol = account.getPolicy();
         assertEq(pol.dailyLimit, DAILY_LIMIT);
         assertEq(pol.expiresAt, expiresAt);
@@ -85,6 +95,8 @@ contract AgentSmartAccountTest is Test {
     function test_Initialize_CannotReinitialize() public {
         vm.expectRevert(); // Initializable: contract is already initialized
         account.initialize(stranger, stranger, keccak256("x"), 1, 1);
+        assertEq(account.factory(), address(factory));
+        assertTrue(account.isFactoryAccount());
     }
 
     function test_Implementation_CannotBeInitialized() public {
@@ -255,6 +267,67 @@ contract AgentSmartAccountTest is Test {
         account.execute(address(usdc), 0, transferData);
 
         assertEq(usdc.balanceOf(recipient), transferAmount);
+    }
+
+    function test_EndToEnd_TwoAgents_TransferUsdc_ViaValidationAndExecute() public {
+        // Deploy a second agent account (receiver)
+        (address owner2,) = makeAddrAndKey("owner2");
+        (address operator2,) = makeAddrAndKey("operator2");
+        bytes32 agentId2 = keccak256("test-agent-2");
+        address account2Addr = factory.createAccount(owner2, operator2, agentId2, DAILY_LIMIT, expiresAt);
+        AgentSmartAccount account2 = AgentSmartAccount(payable(account2Addr));
+
+        // SpendingPolicyLib target validation should allow factory-created accounts
+        assertTrue(this._validateTarget(address(account2)));
+
+        uint256 amount = 123e6;
+
+        // Build inner ERC20 transfer
+        bytes memory transferData = abi.encodeWithSelector(
+            usdc.transfer.selector,
+            address(account2),
+            amount
+        );
+
+        // Build account execute callData
+        bytes memory callData = abi.encodeWithSelector(
+            account.execute.selector,
+            address(usdc),
+            0,
+            transferData
+        );
+
+        // Create and sign UserOp hash
+        bytes32 userOpHash = keccak256(callData);
+        bytes32 ethSignedHash =
+            keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", userOpHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(operatorKey, ethSignedHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        PackedUserOperation memory op = PackedUserOperation({
+            sender: address(account),
+            nonce: 0,
+            initCode: "",
+            callData: callData,
+            accountGasLimits: bytes32(0),
+            preVerificationGas: 0,
+            gasFees: bytes32(0),
+            paymasterAndData: "",
+            signature: signature
+        });
+
+        // Validate via EntryPoint (enforces SpendingPolicyLib)
+        vm.prank(ENTRY_POINT);
+        uint256 validation = account.validateUserOp(op, userOpHash, 0);
+        assertEq(validation, 0);
+
+        // Execute via EntryPoint
+        vm.prank(ENTRY_POINT);
+        account.execute(address(usdc), 0, transferData);
+
+        assertEq(usdc.balanceOf(address(account2)), amount);
+        SpendingPolicyLib.DailySpend memory ds = account.getDailySpend();
+        assertEq(ds.amount, amount);
     }
 
     // ==================== executeBatch ====================

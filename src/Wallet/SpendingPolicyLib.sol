@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IAgentSmartAccount} from "./interfaces/IAgentSmartAccount.sol";
+
 /// @title SpendingPolicyLib
 /// @notice Library for validating and enforcing agent wallet spending policies
 /// @dev Used by AgentSmartAccount to enforce constraints on UserOp execution
@@ -44,10 +46,15 @@ library SpendingPolicyLib {
         mapping(address => bool) storage allowedTargets,
         address target
     ) internal view returns (bool) {
-        if (!allowedTargets[target]) {
-            revert TargetNotAllowed(target);
+        if (allowedTargets[target]) {
+            return true;
         }
-        return true;
+
+        if (_isFactoryAccount(target)) {
+            return true;
+        }
+
+        revert TargetNotAllowed(target);
     }
 
     /// @notice Check whether a token address is in the allow-list
@@ -116,6 +123,17 @@ library SpendingPolicyLib {
         if (block.timestamp >= daily.lastReset + DAY) {
             daily.amount = 0;
             daily.lastReset = block.timestamp;
+        }
+    }
+
+    // -- Internal helpers --
+
+    function _isFactoryAccount(address target) private view returns (bool) {
+        if (target.code.length == 0) return false;
+        try IAgentSmartAccount(target).isFactoryAccount() returns (bool ok) {
+            return ok;
+        } catch {
+            return false;
         }
     }
 }
