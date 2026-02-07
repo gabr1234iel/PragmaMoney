@@ -34,7 +34,6 @@ interface PendingRegistration {
   operatorAddress: string;
   name: string;
   description: string;
-  endpoint: string;
   dailyLimit: string;
   expiryDays: number;
   poolDailyCap: string;
@@ -61,7 +60,6 @@ interface FundBody {
   operatorAddress?: string;
   name?: string;
   description?: string;
-  endpoint?: string;
   dailyLimit?: string;
   expiryDays?: number;
   poolDailyCap?: string;
@@ -75,7 +73,6 @@ registerAgentRouter.post("/fund", async (req: Request, res: Response) => {
       operatorAddress,
       name,
       description,
-      endpoint,
       dailyLimit,
       expiryDays,
       poolDailyCap,
@@ -106,7 +103,6 @@ registerAgentRouter.post("/fund", async (req: Request, res: Response) => {
     const metadataURI = JSON.stringify({
       name: name.trim(),
       description: (description ?? "").trim(),
-      endpoint: (endpoint ?? "").trim(),
     });
 
     // ---- Send ETH to agent EOA ----
@@ -126,7 +122,6 @@ registerAgentRouter.post("/fund", async (req: Request, res: Response) => {
       operatorAddress,
       name: name.trim(),
       description: (description ?? "").trim(),
-      endpoint: (endpoint ?? "").trim(),
       dailyLimit: dailyLimit,
       expiryDays: expiryDays ?? 365,
       poolDailyCap: poolDailyCap ?? "1000",

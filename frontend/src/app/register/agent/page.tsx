@@ -33,7 +33,6 @@ type Step = 1 | 2 | 3 | 4 | 5;
 interface AgentDetails {
   name: string;
   description: string;
-  endpoint: string;
   x402Support: boolean;
 }
 
@@ -63,7 +62,6 @@ export default function RegisterAgentPage() {
   const [agentDetails, setAgentDetails] = useState<AgentDetails>({
     name: "",
     description: "",
-    endpoint: "",
     x402Support: true,
   });
 
@@ -120,12 +118,6 @@ export default function RegisterAgentPage() {
   // Step 1: Validate agent details
   const validateStep1 = (): boolean => {
     if (!agentDetails.name.trim()) return false;
-    if (!agentDetails.endpoint.trim()) return false;
-    try {
-      new URL(agentDetails.endpoint);
-    } catch {
-      return false;
-    }
     return true;
   };
 
@@ -148,12 +140,6 @@ export default function RegisterAgentPage() {
         type: "AIAgent",
         name: agentDetails.name,
         description: agentDetails.description,
-        services: [
-          {
-            type: "APIService",
-            serviceEndpoint: agentDetails.endpoint,
-          },
-        ],
         x402Support: agentDetails.x402Support,
       });
 
@@ -322,7 +308,6 @@ export default function RegisterAgentPage() {
       const agentURIJson = JSON.stringify({
         name: agentDetails.name,
         description: agentDetails.description,
-        endpoint: agentDetails.endpoint,
         x402Support: agentDetails.x402Support,
       });
 
@@ -549,23 +534,6 @@ export default function RegisterAgentPage() {
                     rows={4}
                     className="input-field resize-none"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-lobster-dark mb-2">
-                    Service Endpoint <span className="text-lobster-primary">*</span>
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    value={agentDetails.endpoint}
-                    onChange={(e) => setAgentDetails({ ...agentDetails, endpoint: e.target.value })}
-                    placeholder="https://api.example.com/agent"
-                    className="input-field"
-                  />
-                  <p className="text-xs text-lobster-text mt-1">
-                    The upstream API your agent will use for inference or data
-                  </p>
                 </div>
 
                 <div>
