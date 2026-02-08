@@ -111,6 +111,21 @@ forge script script/Deploy.s.sol:Deploy --rpc-url base_sepolia --broadcast --ver
 forge script script/Deploy.s.sol:RedeployGatewayRealUSDC --rpc-url base_sepolia --broadcast --verify -vvvv
 ```
 
+### Arc Testnet Deployments (Chain 5042002)
+
+Deployed via `forge script script/Deploy.s.sol:DeployArc --rpc-url arc_testnet --broadcast -vvvv`:
+
+| Contract | Address |
+|---|---|
+| AgentSmartAccount (impl) | `0xf4114F0024882349B7Aa3d59720794D490223631` |
+| AgentAccountFactory | `0xd15a37aD700cFec8746bFc19015e0ea685dba70B` |
+| ReputationReporter (impl) | `0x05D8DF6C24EF932F1E90D6c89FCEDa17577a7458` |
+| ReputationReporter (proxy) | `0xF231DE1E5A5ab6D7dDa5445De3963fE4d9a3bbF8` |
+| AgentFactory | `0x4355A353e04115698a6eE46373180816D46528C2` |
+| ScoreOracle | `0xA8BA52685FA97fE6e674bE930beF7A9AeF29Cf77` |
+| ServiceRegistry | `0x2fC5462371D759E70C7C954327db98D427322F47` |
+| x402Gateway | `0x934a46bdC61A8e78DdABab7F927a21084E33bDBc` |
+
 ## 2. Proxy Server
 
 ```bash
