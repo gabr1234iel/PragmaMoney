@@ -5,6 +5,12 @@ export const RPC_URL = "https://sepolia.base.org";
 export const DEFAULT_PROXY_URL = "http://localhost:4402";
 
 export const USDC_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+export const RFUSDC_ADDRESS = "0x8ac2EeF8EA8f63bc6109c22f7c505962B96cEab0";
+export const SUPER_FAKE_USDC_ADDRESS = "0x04eAFA8141F06Ff882b5Aa21064cCBd9E48DfbB8";
+export const BINGER_TOKEN_ADDRESS = "0xC8308c6bc561A46275256981dd17298c31300595";
+export const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
+export const UNISWAP_UNIVERSAL_ROUTER_ADDRESS =
+  "0x492E6456D9528771018DeB9E87ef7750EF184104";
 export const SERVICE_REGISTRY_ADDRESS = "0x63B0997740B5828B3e58979D90AE5a6014988d55";
 export const X402_GATEWAY_ADDRESS = "0x59bda9849C4eB742eC7Bb2A0Ee61F84e1278168E";
 export const IDENTITY_REGISTRY_ADDRESS = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
@@ -40,6 +46,20 @@ export const ERC20_ABI = [
   "function decimals() view returns (uint8)",
   "function symbol() view returns (string)",
   "function transfer(address to, uint256 amount) returns (bool)",
+] as const;
+
+export const RFUSDC_ABI = [
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function mint(address account, uint256 amount) returns (bool)",
+  "function balanceOf(address owner) view returns (uint256)",
+] as const;
+
+export const SUPER_REAL_FAKE_USDC_ABI = [
+  "function upgrade(uint256 amount)",
+] as const;
+
+export const UNISWAP_UNIVERSAL_ROUTER_ABI = [
+  "function execute(bytes commands, bytes[] inputs)",
 ] as const;
 
 export const SERVICE_REGISTRY_ABI = [

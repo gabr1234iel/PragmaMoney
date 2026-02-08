@@ -49,7 +49,6 @@ contract Addresses {
         values[baseSepolia]["IdentityRegistry"] = toBytes32(0x8004A818BFB912233c491871b3d84c89A494BD9e);
         values[baseSepolia]["ReputationRegistry"] = toBytes32(0x8004B663056A597Dffe9eCcC1965A193B7388713);
         values[baseSepolia]["UniswapUniversalRouter"] = toBytes32(0x492E6456D9528771018DeB9E87ef7750EF184104);
-        values[baseSepolia]["WETH"] = toBytes32(0x4200000000000000000000000000000000000006);
     }
 
     /// @notice Convert an address to bytes32

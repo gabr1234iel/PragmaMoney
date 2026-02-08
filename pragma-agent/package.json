@@ -9,12 +9,26 @@
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/cli.js"
+    "start": "node dist/cli.js",
+    "postinstall": "node scripts/link-ethers-v5.js"
   },
   "dependencies": {
+    "@uniswap/sdk-core": "^7.10.1",
+    "@uniswap/universal-router-sdk": "^4.30.0",
+    "@uniswap/v4-core": "^1.0.2",
+    "@uniswap/v4-periphery": "^1.0.3",
+    "@uniswap/v4-sdk": "^1.27.0",
     "ethers": "^6.0.0",
     "permissionless": "^0.2.57",
     "viem": "^2.45.1"
+  },
+  "overrides": {
+    "@uniswap/universal-router-sdk": {
+      "ethers": "5.7.2"
+    },
+    "@uniswap/v4-sdk": {
+      "ethers": "5.7.2"
+    }
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -22,7 +36,9 @@
     "typescript": "^5.0.0"
   },
   "openclaw": {
-    "extensions": ["./dist/index.js"]
+    "extensions": [
+      "./dist/index.js"
+    ]
   },
   "license": "MIT"
 }

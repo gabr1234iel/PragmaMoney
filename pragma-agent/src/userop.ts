@@ -75,6 +75,19 @@ const ERC20_ABI_VIEM = [
   },
 ] as const;
 
+const FUSDC_ABI_VIEM = [
+  {
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    name: "mint",
+    outputs: [{ type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
 const GATEWAY_ABI_VIEM = [
   {
     inputs: [
@@ -83,6 +96,55 @@ const GATEWAY_ABI_VIEM = [
     ],
     name: "payForService",
     outputs: [{ name: "paymentId", type: "bytes32" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
+const UNIVERSAL_ROUTER_ABI_VIEM = [
+  {
+    inputs: [
+      { name: "commands", type: "bytes" },
+      { name: "inputs", type: "bytes[]" },
+    ],
+    name: "execute",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "commands", type: "bytes" },
+      { name: "inputs", type: "bytes[]" },
+      { name: "deadline", type: "uint256" },
+    ],
+    name: "execute",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+] as const;
+
+const SUPER_REAL_FAKE_USDC_ABI_VIEM = [
+  {
+    inputs: [{ name: "amount", type: "uint256" }],
+    name: "upgrade",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
+const PERMIT2_ABI_VIEM = [
+  {
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint160" },
+      { name: "expiration", type: "uint48" },
+    ],
+    name: "approve",
+    outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
@@ -486,6 +548,84 @@ export function buildApproveCall(
       abi: ERC20_ABI_VIEM,
       functionName: "approve",
       args: [spender, amount],
+    }),
+  };
+}
+
+/**
+ * Build a mint call (for FUSDC or other mintable tokens).
+ */
+export function buildMintCall(
+  token: `0x${string}`,
+  to: `0x${string}`,
+  amount: bigint
+): Call {
+  return {
+    to: token,
+    value: 0n,
+    data: encodeFunctionData({
+      abi: FUSDC_ABI_VIEM,
+      functionName: "mint",
+      args: [to, amount],
+    }),
+  };
+}
+
+/**
+ * Build a Uniswap Universal Router execute call.
+ */
+export function buildUniversalRouterExecuteCall(
+  router: `0x${string}`,
+  commands: `0x${string}`,
+  inputs: `0x${string}`[],
+  deadline?: bigint
+): Call {
+  return {
+    to: router,
+    value: 0n,
+    data: encodeFunctionData({
+      abi: UNIVERSAL_ROUTER_ABI_VIEM,
+      functionName: "execute",
+      args: deadline !== undefined ? [commands, inputs, deadline] : [commands, inputs],
+    }),
+  };
+}
+
+/**
+ * Build upgrade call for Super Real Fake USDC.
+ */
+export function buildUpgradeCall(
+  token: `0x${string}`,
+  amount: bigint
+): Call {
+  return {
+    to: token,
+    value: 0n,
+    data: encodeFunctionData({
+      abi: SUPER_REAL_FAKE_USDC_ABI_VIEM,
+      functionName: "upgrade",
+      args: [amount],
+    }),
+  };
+}
+
+/**
+ * Build a Permit2 approve call (AllowanceTransfer.approve).
+ */
+export function buildPermit2ApproveCall(
+  permit2: `0x${string}`,
+  token: `0x${string}`,
+  spender: `0x${string}`,
+  amount: bigint,
+  expiration: bigint
+): Call {
+  return {
+    to: permit2,
+    value: 0n,
+    data: encodeFunctionData({
+      abi: PERMIT2_ABI_VIEM,
+      functionName: "approve",
+      args: [token, spender, amount, expiration] as any,
     }),
   };
 }

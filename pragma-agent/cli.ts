@@ -24,6 +24,8 @@ import { handlePay } from "./src/pay.js";
 import type { PayInput } from "./src/pay.js";
 import { handleCall } from "./src/call.js";
 import type { CallInput } from "./src/call.js";
+import { handleSwap } from "./src/swap.js";
+import type { SwapInput } from "./src/swap.js";
 
 // ─── Arg parsing helpers ─────────────────────────────────────────────────────
 
@@ -61,6 +63,7 @@ Commands:
   pool       AgentPool: info, remaining, pull, invest
   pay        Pay for services: pay, verify
   call       One-step pay + HTTP call
+  swap-v4    Uniswap V4 swap via Universal Router
 
 Examples:
   pragma-agent register --name "MyAgent" --endpoint "https://myagent.com" --daily-limit 100 --expiry-days 90 --pool-daily-cap 50
@@ -75,6 +78,7 @@ Examples:
   pragma-agent pay pay --service-id 0x... --calls 1
   pragma-agent pay verify --payment-id 0x...
   pragma-agent call --service-id 0x... --method POST --body '{"key":"val"}'
+  pragma-agent swap-v4
 
 Environment:
   PIMLICO_API_KEY   Pimlico bundler API key (required for UserOps)
@@ -230,6 +234,16 @@ Environment:
         ...(getFlag(args, "rpc-url") !== undefined && { rpcUrl: getFlag(args, "rpc-url") }),
       };
       result = await handleCall(input);
+      break;
+    }
+
+    case "swap-v4": {
+      const rpcUrl = getFlag(args, "rpc-url");
+      const input: SwapInput = {
+        action: "swap-v4",
+        ...(rpcUrl !== undefined && { rpcUrl }),
+      };
+      result = await handleSwap(input);
       break;
     }
 

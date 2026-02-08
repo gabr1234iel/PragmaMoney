@@ -17,6 +17,10 @@ export interface Config {
   agentAccountFactoryAddress: string;
   agentPoolFactoryAddress: string;
   fundAmountEoa: string;
+  uniswapUniversalRouterAddress: string;
+  superRealFakeUsdcAddress: string;
+  bingerTokenAddress: string;
+  rfusdcAddress: string;
 }
 
 function parseOrigins(raw: string | undefined): string[] {
@@ -53,4 +57,15 @@ export const config: Config = {
   agentPoolFactoryAddress:
     process.env.AGENT_POOL_FACTORY_ADDRESS || "0x043254035CE6aef612491E30a16479fb51A1f8bA",
   fundAmountEoa: process.env.FUND_AMOUNT_EOA || "0.0005",
+  uniswapUniversalRouterAddress:
+    process.env.UNISWAP_UNIVERSAL_ROUTER_ADDRESS ||
+    "0x492E6456D9528771018DeB9E87ef7750EF184104",
+  superRealFakeUsdcAddress:
+    process.env.SUPER_REAL_FAKE_USDC_ADDRESS ||
+    "0x04eAFA8141F06Ff882b5Aa21064cCBd9E48DfbB8",
+  bingerTokenAddress:
+    process.env.BINGER_TOKEN_ADDRESS ||
+    "0xC8308c6bc561A46275256981dd17298c31300595",
+  rfusdcAddress:
+    process.env.RFUSDC_ADDRESS || "0x8ac2EeF8EA8f63bc6109c22f7c505962B96cEab0",
 };

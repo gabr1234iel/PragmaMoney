@@ -303,6 +303,50 @@ registerAgentRouter.post("/setup", async (req: Request, res: Response) => {
     txHashes.setTargets = allowRegistryReceipt.hash;
     console.log(`[register-agent/setup] setTargets done (gateway, USDC, ServiceRegistry)`);
 
+    const n6 = allocateNonce();
+    const allowUniversalRouterTx = await smartAccount.setTargetAllowed(
+      config.uniswapUniversalRouterAddress,
+      true,
+      { nonce: n6 },
+    );
+    await allowUniversalRouterTx.wait();
+
+    const n7 = allocateNonce();
+    const allowTokenInTx = await smartAccount.setTokenAllowed(
+      config.superRealFakeUsdcAddress,
+      true,
+      { nonce: n7 },
+    );
+    await allowTokenInTx.wait();
+
+    const n8 = allocateNonce();
+    const allowTokenOutTx = await smartAccount.setTokenAllowed(
+      config.bingerTokenAddress,
+      true,
+      { nonce: n8 },
+    );
+    await allowTokenOutTx.wait();
+    console.log(
+      `[register-agent/setup] allowed Uniswap router + tokens (in/out)`,
+    );
+
+    const n9 = allocateNonce();
+    const allowFusdcTargetTx = await smartAccount.setTargetAllowed(
+      config.rfusdcAddress,
+      true,
+      { nonce: n9 },
+    );
+    await allowFusdcTargetTx.wait();
+
+    const n10 = allocateNonce();
+    const allowFusdcTokenTx = await smartAccount.setTokenAllowed(
+      config.rfusdcAddress,
+      true,
+      { nonce: n10 },
+    );
+    await allowFusdcTokenTx.wait();
+    console.log(`[register-agent/setup] allowed FUSDC target + token`);
+
     // Store smart account address for /finalize phase
     pending.smartAccountAddress = smartAccountAddress;
 
