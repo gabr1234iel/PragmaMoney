@@ -13,8 +13,9 @@
  *   9.  List services
  *   10. Pay for service
  *   11. Verify payment
- *   12. Invest in own pool
- *   13. Final balances
+ *   12. Swap via smart account (Uniswap V4)
+ *   13. Invest in own pool
+ *   14. Final balances
  *
  * Prerequisites:
  *   - Proxy running at RELAYER_URL (default: http://localhost:4402)
@@ -31,6 +32,7 @@ import { handleWallet, loadOrCreateWallet, getRegistration } from "../src/wallet
 import { handleServices } from "../src/services.js";
 import { handlePool } from "../src/pool.js";
 import { handlePay } from "../src/pay.js";
+import { handleSwap } from "../src/swap.js";
 import {
   RPC_URL,
   USDC_ADDRESS,
@@ -301,8 +303,19 @@ async function main() {
   }
   console.log();
 
-  // ── Step 12: Invest in own pool ─────────────────────────────────────────
-  console.log(`--- Step 12: Invest ${INVEST_AMOUNT} USDC in own pool ---`);
+  // ── Step 12: Swap via smart account (Uniswap V4) ────────────────────────
+  console.log("--- Step 12: Swap via smart account (swap-v4) ---");
+  const swapResult = parseResult(
+    await handleSwap({ action: "swap-v4" }),
+  );
+  log("txHash", swapResult.txHash);
+  log("userOpHash", swapResult.userOpHash);
+  assert(swapResult.success === true, "swap should succeed");
+  console.log("  PASS");
+  console.log();
+
+  // ── Step 13: Invest in own pool ─────────────────────────────────────────
+  console.log(`--- Step 13: Invest ${INVEST_AMOUNT} USDC in own pool ---`);
   const investResult = parseResult(
     await handlePool({
       action: "invest",
@@ -317,8 +330,8 @@ async function main() {
   console.log("  PASS");
   console.log();
 
-  // ── Step 13: Final balances ─────────────────────────────────────────────
-  console.log("--- Step 13: Final balances ---");
+  // ── Step 14: Final balances ─────────────────────────────────────────────
+  console.log("--- Step 14: Final balances ---");
   await new Promise((r) => setTimeout(r, 3000));
   const finalBalance = parseResult(
     await handleWallet({ action: "getBalance" }),
