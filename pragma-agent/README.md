@@ -1,6 +1,6 @@
 # pragma-agent — PragmaMoney CLI + OpenClaw Skill
 
-A CLI tool and OpenClaw skill that gives AI agents the ability to register on-chain, manage wallets, browse services, and pay for API calls on PragmaMoney (Base Sepolia).
+A CLI tool and OpenClaw skill that gives AI agents the ability to register on-chain, manage wallets, browse services, and pay for API calls on PragmaMoney (Base Sepolia / Arc testnet).
 
 ## Quick Start
 
@@ -155,6 +155,14 @@ The 3-phase registration ensures the agent EOA owns its identity NFT:
 3. POST /register-agent/setup     → Proxy deploys smart account + configures targets
 4. Agent tx: setAgentWallet()     → Agent EOA binds smart account to identity
 5. POST /register-agent/finalize  → Proxy creates investor pool + allows as target
+```
+
+## Notes on Uniswap SDK usage
+
+The Uniswap SDKs depend on ethers v5 internals (e.g., `ethers/lib/utils`). This repo uses ethers v6 elsewhere, so `postinstall` runs `scripts/link-ethers-v5.js` to symlink ethers v5 into the SDKs. If you see `ERR_PACKAGE_PATH_NOT_EXPORTED`, rerun:
+
+```bash
+node scripts/link-ethers-v5.js
 ```
 
 ## Verify On-Chain State

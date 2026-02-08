@@ -75,7 +75,7 @@ contract ScoreOracle is Ownable {
         string[] calldata tag1s,
         string[] calldata tag2s,
         int32[] calldata weightsBps
-    ) external onlyOwnerOrAdmin {
+    ) external {
         if (tag1s.length != tag2s.length) revert Errors.BadTagArrayLength();
         if (tag1s.length != weightsBps.length) revert Errors.BadTagArrayLength();
 

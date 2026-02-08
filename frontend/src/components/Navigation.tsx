@@ -12,6 +12,7 @@ const navLinks = [
   { href: "/playground", label: "Playground" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/register", label: "Register" },
+  { href: "/score", label: "Score" },
 ];
 
 export function Navigation() {

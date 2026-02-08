@@ -1,21 +1,53 @@
 # PragmaMoney
 
-Payment infrastructure for AI agents on Base Sepolia. Agents register on-chain identities, receive constrained smart wallets with spending policies, and pay for services through an x402-compatible proxy.
+Payment infrastructure for AI agents on Base Sepolia and Arc Testnet. Agents register on-chain identities, receive constrained smart wallets with spending policies, and pay for services through an x402-compatible proxy.
 
 ## Architecture
 
-```
-                         INBOUND (agent earns)
-End users / agents  ──>  x402 proxy (402 + EIP-3009)  ──>  40% pool / 60% agent wallet
-
-                         OUTBOUND (agent spends, policy-enforced)
-Agent smart wallet  ──>  UserOp ──> EntryPoint ──> gateway.payForService()  ──>  target proxy
-```
+![Architecture diagram](./architecture.png)
 
 Three payment layers:
-- **x402 (Path A)** -- End users pay via EIP-3009 `transferWithAuthorization`. Proxy splits revenue 40/60 between pool and agent wallet.
+- **x402 (Path A)** -- End users pay via the proxy (facilitator-style flow); the on-chain gateway splits revenue **40% to the agent pool / 60% to the agent wallet**.
 - **Gateway (Path B)** -- Agents pay on-chain via `payForService()`, constrained by smart wallet policy.
-- **UserOps (ERC-4337)** -- Agents execute transactions through the EntryPoint with spending limits, allowed targets, and merkle-tree action allowlists.
+- **UserOps (ERC-4337)** -- Agents execute transactions through the EntryPoint with spending limits and allowed targets (policy-based, no merkle allowlist).
+
+Key corrections to the diagram:
+- The **40% split goes to the ERC-4626 agent pool**, not directly to investors.
+- **`setAgentWallet` is called by the creator on the IdentityRegistry** (EIP-712 signature), not by the Agent Factory.
+- **Feedback is submitted by users/clients via ReputationReporter**, then ScoreOracle reads ReputationRegistry summaries.
+
+## Core Flows
+
+### 1) Register Agent (frontend `/register/agent`)
+1. **IdentityRegistry → `register(agentURI)`**  
+   Mints the ERC-8004 identity NFT and returns `agentId` (from the ERC-721 `Transfer` event).
+2. **AgentAccountFactory → `createAccount(owner, operator, salt, dailyLimit, expiresAt)`**  
+   Deploys the agent smart account (ERC-4337 compatible).
+3. **IdentityRegistry → `setAgentWallet(agentId, smartAccount, deadline, signature)`**  
+   Binds the wallet to the identity NFT using EIP-712 signature.
+4. **AgentPoolFactory → `createAgentPool(agentId, smartAccount, poolParams)`**  
+   Deploys the ERC-4626 agent pool for investors.
+
+### 2) Register Service (frontend `/register/service`)
+1. **Detect agentId** from IdentityRegistry for the connected wallet.
+2. **ServiceRegistry → `registerService(...)`**  
+   Validates agent identity + wallet + pool, then stores service metadata.
+3. **Proxy registration (off-chain)**  
+   `POST /api/register-proxy` registers the resource in the proxy store so `/proxy/:serviceId` works.
+
+### 3) Pay For Service (x402)
+1. **User/agent → x402 proxy (facilitator flow)**  
+   The proxy acts like the real x402 payment gateway/facilitator: it validates the payment authorization, verifies on‑chain service metadata, and then submits the on‑chain settlement.
+2. **x402Gateway (on‑chain settlement)**  
+   Executes `payForService`, splits revenue **40% to AgentPool / 60% to AgentSmartAccount**, and records usage in ServiceRegistry.
+
+### 4) Calculate Score (frontend `/score`)
+1. **ReputationReporter → ReputationRegistry**  
+   Clients submit feedback signals.
+2. **ScoreOracle → `calculateScore(agentId, tag1s, tag2s, weightsBps)`**  
+   Reads summaries, computes score delta, and updates the agent pool daily cap.
+3. **Score page**  
+   Enter `agentId`, tag pairs, and weights; `tag2s` are optional (auto-filled as empty strings).
 
 ## Project Structure
 
@@ -131,6 +163,7 @@ Open http://localhost:3000 and connect a wallet on Base Sepolia.
 | Playground | Pay for and call services (x402 flow) |
 | Dashboard | Wallet balance, spending policy, pool status |
 | Register | Register new services or agents (multi-step wizard) |
+| Score | Call ScoreOracle.calculateScore |
 
 ## 4. Agent Plugin (OpenClaw)
 
@@ -237,9 +270,19 @@ PIMLICO_API_KEY=your_key npx tsx scripts/test-pull.ts
 | IdentityRegistry (ERC-8004) | `0x8004A818BFB912233c491871b3d84c89A494BD9e` |
 | ReputationRegistry | `0x8004B663056A597Dffe9eCcC1965A193B7388713` |
 | AgentFactory | `0xcB016c9DC6c9bE4D6AaE84405B2686569F9cEc05` |
+| ScoreOracle | `0x0000000000000000000000000000000000000000` |
 | EntryPoint (v0.7) | `0x0000000071727De22E5E9d8BAf0edAc6f37da032` |
 
-> AgentSmartAccount impl and AgentAccountFactory will be redeployed after the merkle action-allowlist + v0.7 EntryPoint update lands.
+> Update `frontend/src/lib/contracts.ts` with your deployed ScoreOracle address after deployment.
+
+## Arc Testnet (chainId 5042002)
+
+Arc deployment uses the same contracts and flows. Add `ARC_RPC_URL` in `.env` and deploy with:
+
+```bash
+ARC_RPC_URL=https://rpc.testnet.arc.network \
+forge script script/DeployArcRegistries.s.sol:DeployArcRegistries --rpc-url $ARC_RPC_URL --broadcast -vvvv
+```
 
 ## License
 
