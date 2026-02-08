@@ -11,6 +11,9 @@ export const BINGER_TOKEN_ADDRESS = "0xC8308c6bc561A46275256981dd17298c31300595"
 export const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
 export const UNISWAP_UNIVERSAL_ROUTER_ADDRESS =
   "0x492E6456D9528771018DeB9E87ef7750EF184104";
+export const REPUTATION_REPORTER_ADDRESS =
+  process.env.REPUTATION_REPORTER_ADDRESS ||
+  "0x781eff1D46A999d71DBEd76aD9fA1BcB104F32cb";
 export const SERVICE_REGISTRY_ADDRESS = "0x63B0997740B5828B3e58979D90AE5a6014988d55";
 export const X402_GATEWAY_ADDRESS = "0x59bda9849C4eB742eC7Bb2A0Ee61F84e1278168E";
 export const IDENTITY_REGISTRY_ADDRESS = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
@@ -62,9 +65,14 @@ export const UNISWAP_UNIVERSAL_ROUTER_ABI = [
   "function execute(bytes commands, bytes[] inputs)",
 ] as const;
 
+export const REPUTATION_REPORTER_ABI = [
+  "function giveFeedback(uint256 agentId,int128 value,uint8 valueDecimals,string tag1,string tag2,string endpoint,string feedbackURI,bytes32 feedbackHash)",
+] as const;
+
 export const SERVICE_REGISTRY_ABI = [
   // Read service data
   "function getService(bytes32 serviceId) view returns (tuple(uint256 agentId, address owner, string name, uint256 pricePerCall, string endpoint, uint8 serviceType, bool active, uint256 totalCalls, uint256 totalRevenue))",
+  "function getAgentId(bytes32 serviceId) view returns (uint256)",
   "function getServiceCount() view returns (uint256)",
   "function getServiceIdAt(uint256 index) view returns (bytes32)",
   // Write

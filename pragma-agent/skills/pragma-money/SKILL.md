@@ -95,9 +95,14 @@ One command: pays USDC on-chain via your smart wallet, then calls the API. The r
 ### Pay only (no API call)
 
 ```bash
-pragma-agent pay pay --service-id 0x... --calls 1
+pragma-agent pay pay --service-id 0x... --calls 1 --score 85
 pragma-agent pay verify --payment-id 0x...
 ```
+
+**Reputation scoring (required)**:
+- Every `pay` must include a `--score` (0-100).
+- Use a subjective score based on the agent's judgment of service quality.
+- Suggested anchors: 100 = excellent, 70 = acceptable, 30 = poor, 0 = failed.
 
 ## Managing Your Wallet
 

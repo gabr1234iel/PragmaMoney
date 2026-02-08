@@ -204,11 +204,19 @@ Environment:
         process.exit(1);
       }
 
+      if (action === "pay" && getFlagNum(args, "score") === undefined) {
+        console.error(JSON.stringify({
+          error: "Missing required flag for pay: --score (0-100).",
+        }));
+        process.exit(1);
+      }
+
       const input: PayInput = {
         action,
         ...(getFlag(args, "service-id") !== undefined && { serviceId: getFlag(args, "service-id") }),
         ...(getFlagNum(args, "calls") !== undefined && { calls: getFlagNum(args, "calls") }),
         ...(getFlag(args, "payment-id") !== undefined && { paymentId: getFlag(args, "payment-id") }),
+        ...(getFlagNum(args, "score") !== undefined && { score: getFlagNum(args, "score") }),
         ...(getFlag(args, "rpc-url") !== undefined && { rpcUrl: getFlag(args, "rpc-url") }),
       };
       result = await handlePay(input);
@@ -249,7 +257,7 @@ Environment:
 
     default:
       console.error(JSON.stringify({
-        error: `Unknown command: ${command}. Valid: register, wallet, services, pool, pay, call`,
+        error: `Unknown command: ${command}. Valid: register, wallet, services, pool, pay, call, swap-v4`,
       }));
       process.exit(1);
   }

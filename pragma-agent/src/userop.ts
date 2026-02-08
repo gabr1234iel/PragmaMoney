@@ -135,6 +135,24 @@ const SUPER_REAL_FAKE_USDC_ABI_VIEM = [
   },
 ] as const;
 
+const REPUTATION_REPORTER_ABI_VIEM = [
+  {
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "value", type: "int128" },
+      { name: "valueDecimals", type: "uint8" },
+      { name: "tag1", type: "string" },
+      { name: "tag2", type: "string" },
+      { name: "endpoint", type: "string" },
+      { name: "feedbackURI", type: "string" },
+      { name: "feedbackHash", type: "bytes32" },
+    ],
+    name: "giveFeedback",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
 const PERMIT2_ABI_VIEM = [
   {
     inputs: [
@@ -705,6 +723,40 @@ export function buildPoolDepositCall(
       abi: POOL_ABI_VIEM,
       functionName: "deposit",
       args: [assets, receiver],
+    }),
+  };
+}
+
+/**
+ * Build a ReputationReporter.giveFeedback call.
+ */
+export function buildReputationFeedbackCall(
+  reporter: `0x${string}`,
+  agentId: bigint,
+  value: bigint,
+  valueDecimals: number,
+  tag1: string,
+  tag2: string,
+  endpoint: string,
+  feedbackURI: string,
+  feedbackHash: `0x${string}`
+): Call {
+  return {
+    to: reporter,
+    value: 0n,
+    data: encodeFunctionData({
+      abi: REPUTATION_REPORTER_ABI_VIEM,
+      functionName: "giveFeedback",
+      args: [
+        agentId,
+        value,
+        valueDecimals,
+        tag1,
+        tag2,
+        endpoint,
+        feedbackURI,
+        feedbackHash,
+      ],
     }),
   };
 }

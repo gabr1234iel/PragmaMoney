@@ -273,6 +273,7 @@ async function main() {
       action: "pay",
       serviceId,
       calls: 1,
+      score: 85,
     }),
   );
   const paymentId = payResult.paymentId as string;

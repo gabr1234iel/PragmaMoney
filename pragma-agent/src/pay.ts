@@ -8,9 +8,16 @@ import {
   ERC20_ABI,
   SERVICE_REGISTRY_ADDRESS,
   SERVICE_REGISTRY_ABI,
+  REPUTATION_REPORTER_ADDRESS,
 } from "./config.js";
 import { loadOrCreateWallet, requireRegistration } from "./wallet.js";
-import { sendUserOp, buildApproveCall, buildPayForServiceCall } from "./userop.js";
+import {
+  sendUserOp,
+  buildApproveCall,
+  buildPayForServiceCall,
+  buildReputationFeedbackCall,
+} from "./userop.js";
+import { keccak256, stringToHex, isHex } from "viem";
 
 // ─── Tool handler ────────────────────────────────────────────────────────────
 
@@ -24,6 +31,8 @@ export interface PayInput {
   paymentId?: string;
   /** Optional: override RPC URL */
   rpcUrl?: string;
+  /** Reputation score 0-100 to submit after payment (required for pay). */
+  score?: number;
 }
 
 export async function handlePay(input: PayInput): Promise<string> {
@@ -35,6 +44,12 @@ export async function handlePay(input: PayInput): Promise<string> {
         if (!input.serviceId) {
           return JSON.stringify({
             error: "serviceId is required for 'pay' action.",
+          });
+        }
+
+        if (input.score === undefined || input.score === null) {
+          return JSON.stringify({
+            error: "score is required for 'pay' action.",
           });
         }
 
@@ -51,6 +66,7 @@ export async function handlePay(input: PayInput): Promise<string> {
         const provider = new JsonRpcProvider(rpcUrl);
         const registry = new Contract(SERVICE_REGISTRY_ADDRESS, SERVICE_REGISTRY_ABI, provider);
         const service = await registry.getService(input.serviceId);
+        const agentId: bigint = await registry.getAgentId(input.serviceId);
 
         if (!service.active) {
           return JSON.stringify({
@@ -112,6 +128,59 @@ export async function handlePay(input: PayInput): Promise<string> {
           });
         }
 
+        let reputationTx: string | null = null;
+        const scoreNum = Number(input.score);
+        if (Number.isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
+          return JSON.stringify({ error: "score must be between 0 and 100" });
+        }
+        if (
+          !REPUTATION_REPORTER_ADDRESS ||
+          REPUTATION_REPORTER_ADDRESS === "0x781eff1D46A999d71DBEd76aD9fA1BcB104F32cb"
+        ) {
+          return JSON.stringify({ error: "REPUTATION_REPORTER_ADDRESS is not configured" });
+        }
+
+        const tag1 = "score";
+        const tag2 = "payment";
+        const endpoint = "";
+        const feedbackURI = "";
+        const payload = JSON.stringify({
+          serviceId: input.serviceId,
+          agentId: agentId.toString(),
+          score: scoreNum,
+          tag1,
+          tag2,
+        });
+        const feedbackHash = keccak256(stringToHex(payload));
+
+        const repResult = await sendUserOp(
+          registration.smartAccount as `0x${string}`,
+          walletData.privateKey as `0x${string}`,
+          [
+            buildReputationFeedbackCall(
+              REPUTATION_REPORTER_ADDRESS as `0x${string}`,
+              agentId,
+              BigInt(scoreNum),
+              0,
+              tag1,
+              tag2,
+              endpoint,
+              feedbackURI,
+              feedbackHash as `0x${string}`
+            ),
+          ],
+          { skipSponsorship: true }
+        );
+
+        if (!repResult.success) {
+          return JSON.stringify({
+            error: "Reputation UserOp failed on-chain.",
+            txHash: repResult.txHash,
+            userOpHash: repResult.userOpHash,
+          });
+        }
+        reputationTx = repResult.txHash;
+
         // Extract paymentId from the ServicePaid event in the transaction receipt
         let paymentId: string | null = null;
         const txReceipt = await provider.getTransactionReceipt(result.txHash);
@@ -145,6 +214,8 @@ export async function handlePay(input: PayInput): Promise<string> {
           txHash: result.txHash,
           userOpHash: result.userOpHash,
           payer: registration.smartAccount,
+          agentId: agentId.toString(),
+          reputationTx,
         });
       }
 
@@ -208,6 +279,11 @@ export const paySchema = {
         type: "string" as const,
         description:
           "The bytes32 payment identifier to verify. Required for 'verify' action.",
+      },
+      score: {
+        type: "number" as const,
+        description:
+          "Required reputation score (0-100) to submit after a successful payment.",
       },
       rpcUrl: {
         type: "string" as const,
