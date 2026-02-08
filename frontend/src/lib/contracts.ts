@@ -3,12 +3,12 @@ import { Address } from "viem";
 // Contract addresses on Base Sepolia (deployed)
 // Real USDC — required by x402 facilitator (EIP-3009 support)
 export const USDC_ADDRESS: Address = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
-export const GATEWAY_ADDRESS: Address = "0x59bda9849C4eB742eC7Bb2A0Ee61F84e1278168E";
-export const SERVICE_REGISTRY_ADDRESS: Address = "0x63B0997740B5828B3e58979D90AE5a6014988d55";
-export const AGENT_FACTORY_ADDRESS: Address = "0xf4E7B1B5B67C0E986312F3de580D291E21Fe6998";
+export const GATEWAY_ADDRESS: Address = "0x6f29093e31136644BEDd0c4a904d13334Db1e60C";
+export const SERVICE_REGISTRY_ADDRESS: Address = "0x1Ace3c1Ac3E4D849373017B43804Eb515516950E";
+export const AGENT_FACTORY_ADDRESS: Address = "0xBbC699E79B9fa50E8E7974F07D2ED75D76dFb499";
 
-// AgentFactory (Launchpad pool factory) — deployed by DeployAgentFactory script
-export const AGENT_POOL_FACTORY_ADDRESS: Address = "0x043254035CE6aef612491E30a16479fb51A1f8bA";
+// AgentFactory (Launchpad pool factory) — deployed by RedeployAll script
+export const AGENT_POOL_FACTORY_ADDRESS: Address = "0xF6CA25ebA2Dc010d19507D2C6138ba2598B7b974";
 
 export const AGENT_POOL_FACTORY_ABI = [
   {
@@ -60,7 +60,8 @@ export const AGENT_POOL_FACTORY_ABI = [
 
 export const IDENTITY_REGISTRY_ADDRESS: Address = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 export const REPUTATION_REGISTRY_ADDRESS: Address = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
-export const SCORE_ORACLE_ADDRESS: Address = "0x0ECD001c9Abd4B7A8bCF2a89A1AA064Da1B0236f";
+export const SCORE_ORACLE_ADDRESS: Address = "0x7F02Fe78627e76D3657529DD814C2881B2F60edC";
+export const REPUTATION_REPORTER_ADDRESS: Address = "0x3FB6ed48640ec7B90E6Ff642c533098c5c80d0c4";
 
 // Minimal ABIs for contract interactions
 export const ERC20_ABI = [

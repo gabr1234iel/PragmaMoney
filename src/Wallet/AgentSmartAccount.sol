@@ -413,14 +413,14 @@ contract AgentSmartAccount is BaseAccount, Initializable {
         return dailySpend;
     }
 
-    /// @notice Check if a target is allowed (per-agent allowlist only, does not check global)
+    /// @notice Check if a target is allowed (per-agent allowlist, global trusted, or factory account)
     function isTargetAllowed(address target) external view returns (bool) {
-        return allowedTargets[target];
+        return _isTargetAllowed(target);
     }
 
-    /// @notice Check if a token is allowed (per-agent allowlist only, does not check global)
+    /// @notice Check if a token is allowed (per-agent allowlist or global trusted)
     function isTokenAllowed(address token) external view returns (bool) {
-        return allowedTokens[token];
+        return _isTokenAllowed(token);
     }
 
     // -- EIP-1271 --

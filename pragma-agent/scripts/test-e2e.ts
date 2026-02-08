@@ -62,7 +62,6 @@ import {
   buildMintCall,
   buildUpgradeCall,
   buildPermit2ApproveCall,
-  buildPermit2PermitCall,
   buildUniversalRouterExecuteCall,
 } from "../src/userop.js";
 import {
@@ -177,6 +176,9 @@ async function registerAgentViaProxy(
   const deadline = setupJson.deadline as number;
   const deployerAddress = setupJson.deployerAddress as string;
   console.log(`    smartAccount: ${smartAccountAddress}`);
+
+  // Wait for smart account deployment to propagate on RPC
+  await new Promise((r) => setTimeout(r, 5000));
 
   // Agent signs EIP-712 and calls setAgentWallet
   console.log(`    Signing EIP-712 and calling setAgentWallet...`);
@@ -521,18 +523,13 @@ async function main() {
   console.log();
 
   // ── Step 13: Agent A does Uniswap V4 swap ─────────────────────────────────
-  // TODO: Debug AA24 error on 4th consecutive UserOp - skipping for now
-  const SKIP_SWAP = true;
-  if (SKIP_SWAP) {
-    console.log("--- Step 13: Swap (SKIPPED - debug AA24 later) ---");
-    console.log("  SKIP");
-    console.log();
-  } else {
-  console.log("--- Step 13: Agent A does Uniswap V4 swap (RFUSDC → SuperFakeUSDC → BingerToken) ---");
+  console.log("--- Step 13: Agent A does Uniswap V4 swap (SuperFakeUSDC → BingerToken) ---");
   await new Promise((r) => setTimeout(r, 3000));
 
+  // RFUSDC is 6 decimals, SuperFakeUSDC is 18 decimals
+  // upgrade() takes SuperFakeUSDC amount (18 decimals) and calculates RFUSDC internally
   const rfusdcAmount = 1_000_000n; // 1 RFUSDC (6 decimals)
-  const superUsdcAmount = rfusdcAmount * 1_000_000_000_000n; // scale to 18 decimals
+  const superFakeAmount = rfusdcAmount * 1_000_000_000_000n; // scale to 18 decimals
   const minAmountOut = 1n;
   const router = UNISWAP_UNIVERSAL_ROUTER_ADDRESS as `0x${string}`;
 
@@ -548,7 +545,7 @@ async function main() {
   const swapConfig = {
     poolKey,
     zeroForOne: true,
-    amountIn: superUsdcAmount.toString(),
+    amountIn: superFakeAmount.toString(),
     amountOutMinimum: minAmountOut.toString(),
     hookData: "0x",
   };
@@ -565,7 +562,11 @@ async function main() {
   const commands = normalizeHex(planner.commands);
   const inputs = planner.inputs.map((input: string) => normalizeHex(input));
 
-  // 1) Mint RFUSDC to Agent A's smart account
+  // Use reasonable approval amounts (not maxUint) to stay within daily limit
+  const approvalAmount = superFakeAmount * 2n; // 2x swap amount for safety
+  const maxUint48 = (1n << 48n) - 1n;
+
+  // 1) Mint RFUSDC to Agent A's smart account (RFUSDC has public mint)
   log("step", "1/6 Minting RFUSDC...");
   const mintResult = await sendUserOp(
     regA.smartAccount as `0x${string}`,
@@ -575,9 +576,9 @@ async function main() {
   );
   log("mint tx", mintResult.txHash);
 
-  // 2) Approve SuperRealFakeUSDC to spend RFUSDC
-  await new Promise((r) => setTimeout(r, 2000));
-  log("step", "2/6 Approving SuperFakeUSDC...");
+  // 2) Approve SuperFakeUSDC to spend RFUSDC
+  await new Promise((r) => setTimeout(r, 3000));
+  log("step", "2/6 Approving SuperFakeUSDC to spend RFUSDC...");
   const approveRfusdcResult = await sendUserOp(
     regA.smartAccount as `0x${string}`,
     walletA.privateKey as `0x${string}`,
@@ -586,105 +587,53 @@ async function main() {
   );
   log("approve tx", approveRfusdcResult.txHash);
 
-  // 3) Upgrade RFUSDC → SuperRealFakeUSDC
-  await new Promise((r) => setTimeout(r, 2000));
-  log("step", "3/6 Upgrading RFUSDC → SuperFakeUSDC...");
+  // 3) Upgrade RFUSDC to SuperFakeUSDC
+  await new Promise((r) => setTimeout(r, 3000));
+  log("step", "3/6 Upgrading to SuperFakeUSDC...");
   const upgradeResult = await sendUserOp(
     regA.smartAccount as `0x${string}`,
     walletA.privateKey as `0x${string}`,
-    [buildUpgradeCall(SUPER_FAKE_USDC_ADDRESS as `0x${string}`, superUsdcAmount)],
+    [buildUpgradeCall(SUPER_FAKE_USDC_ADDRESS as `0x${string}`, superFakeAmount)],
     { skipSponsorship: true },
   );
   log("upgrade tx", upgradeResult.txHash);
 
-  // 4) Approve Permit2 to spend SuperRealFakeUSDC
-  // Longer delay to ensure nonce propagation across load-balanced RPCs
-  await new Promise((r) => setTimeout(r, 5000));
+  // 4) Approve Permit2 to spend SuperFakeUSDC
+  await new Promise((r) => setTimeout(r, 3000));
   log("step", "4/6 Approving Permit2...");
-  const maxUint256 = (1n << 256n) - 1n;
   const approvePermit2Result = await sendUserOp(
     regA.smartAccount as `0x${string}`,
     walletA.privateKey as `0x${string}`,
-    [buildApproveCall(SUPER_FAKE_USDC_ADDRESS as `0x${string}`, PERMIT2_ADDRESS as `0x${string}`, maxUint256)],
+    [buildApproveCall(SUPER_FAKE_USDC_ADDRESS as `0x${string}`, PERMIT2_ADDRESS as `0x${string}`, approvalAmount)],
     { skipSponsorship: true },
   );
   log("approve tx", approvePermit2Result.txHash);
 
-  // 5) Permit2 permit router (EIP-1271 via smart account)
-  await new Promise((r) => setTimeout(r, 2000));
-  log("step", "5/6 Permit2 permit router...");
-  const maxUint160 = (1n << 160n) - 1n;
-  const maxUint48 = (1n << 48n) - 1n;
-  const permit2 = new Contract(
-    PERMIT2_ADDRESS,
-    [
-      "function allowance(address owner,address token,address spender) view returns (uint160 amount,uint48 expiration,uint48 nonce)",
-    ],
-    provider,
-  );
-  const allowance = await permit2.allowance(
-    regA.smartAccount,
-    SUPER_FAKE_USDC_ADDRESS,
-    router,
-  );
-  const nonce = BigInt(allowance.nonce ?? allowance[2]);
-  const sigDeadline = BigInt(Math.floor(Date.now() / 1000) + 300);
-
-  const permitSingle = {
-    details: {
-      token: SUPER_FAKE_USDC_ADDRESS as `0x${string}`,
-      amount: maxUint160,
-      expiration: maxUint48,
-      nonce,
-    },
-    spender: router,
-    sigDeadline,
-  };
-
-  const domain = {
-    name: "Permit2",
-    chainId: 84532,
-    verifyingContract: PERMIT2_ADDRESS,
-  };
-  const types = {
-    PermitDetails: [
-      { name: "token", type: "address" },
-      { name: "amount", type: "uint160" },
-      { name: "expiration", type: "uint48" },
-      { name: "nonce", type: "uint48" },
-    ],
-    PermitSingle: [
-      { name: "details", type: "PermitDetails" },
-      { name: "spender", type: "address" },
-      { name: "sigDeadline", type: "uint256" },
-    ],
-  };
-  const walletASigner = new Wallet(walletA.privateKey, provider);
-  const signature = await walletASigner.signTypedData(domain, types, permitSingle);
-
-  const permit2PermitResult = await sendUserOp(
+  // 5) Permit2 approve router
+  await new Promise((r) => setTimeout(r, 3000));
+  log("step", "5/6 Permit2 approving router...");
+  const permit2ApproveResult = await sendUserOp(
     regA.smartAccount as `0x${string}`,
     walletA.privateKey as `0x${string}`,
-    [
-      buildPermit2PermitCall(
-        PERMIT2_ADDRESS as `0x${string}`,
-        regA.smartAccount as `0x${string}`,
-        permitSingle,
-        signature as `0x${string}`,
-      ),
-    ],
+    [buildPermit2ApproveCall(
+      PERMIT2_ADDRESS as `0x${string}`,
+      SUPER_FAKE_USDC_ADDRESS as `0x${string}`,
+      router,
+      BigInt(approvalAmount) > (1n << 160n) - 1n ? (1n << 160n) - 1n : BigInt(approvalAmount),
+      maxUint48,
+    )],
     { skipSponsorship: true },
   );
-  log("permit2 permit tx", permit2PermitResult.txHash);
+  log("permit2 approve tx", permit2ApproveResult.txHash);
 
   // 6) Execute swap on Universal Router
-  await new Promise((r) => setTimeout(r, 2000));
+  await new Promise((r) => setTimeout(r, 3000));
   log("step", "6/6 Executing swap...");
-  const deadline = BigInt(Math.floor(Date.now() / 1000) + 300);
+  const swapDeadline = BigInt(Math.floor(Date.now() / 1000) + 300);
   const swapResult = await sendUserOp(
     regA.smartAccount as `0x${string}`,
     walletA.privateKey as `0x${string}`,
-    [buildUniversalRouterExecuteCall(router, commands, inputs, deadline)],
+    [buildUniversalRouterExecuteCall(router, commands, inputs, swapDeadline)],
     { skipSponsorship: true },
   );
   log("swap tx", swapResult.txHash);
@@ -697,7 +646,6 @@ async function main() {
   assert(bingerBalance > 0n, "Agent A should have BingerToken after swap");
   console.log("  PASS");
   console.log();
-  } // end SKIP_SWAP else
 
   // ── Step 14: Final balances ───────────────────────────────────────────────
   console.log("--- Step 14: Final balances ---");

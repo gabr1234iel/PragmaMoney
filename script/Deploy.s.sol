@@ -325,12 +325,14 @@ contract RedeployAll is Script {
         address superRealFakeUsdc = 0x04eAFA8141F06Ff882b5Aa21064cCBd9E48DfbB8;
         address bingerToken = 0xC8308c6bc561A46275256981dd17298c31300595;
         address rfusdc = 0x8ac2EeF8EA8f63bc6109c22f7c505962B96cEab0;
+        address permit2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
         accountFactory.setTrustedContract(uniswapRouter, true);
         accountFactory.setTrustedContract(superRealFakeUsdc, true);
         accountFactory.setTrustedContract(bingerToken, true);
         accountFactory.setTrustedContract(rfusdc, true);
-        console2.log("15. Set trusted contracts: uniswap, superRealFakeUsdc, bingerToken, rfusdc");
+        accountFactory.setTrustedContract(permit2, true);
+        console2.log("15. Set trusted contracts: uniswap, superRealFakeUsdc, bingerToken, rfusdc, permit2");
 
         accountFactory.setTrustedToken(superRealFakeUsdc, true);
         accountFactory.setTrustedToken(bingerToken, true);
