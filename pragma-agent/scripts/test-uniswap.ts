@@ -30,7 +30,8 @@ import {
   UNISWAP_UNIVERSAL_ROUTER_ADDRESS,
 } from "../src/config.js";
 
-const AMOUNT = 1_000_000n; // 1 RFUSDC (6 decimals)
+const RFUSDC_AMOUNT = 1_000_000n; // 1 RFUSDC (6 decimals)
+const SUPER_USDC_AMOUNT = RFUSDC_AMOUNT * 1_000_000_000_000n; // scale to 18 decimals
 const MAX_UINT160 = (1n << 160n) - 1n;
 const MAX_UINT256 = (1n << 256n) - 1n;
 const MAX_UINT48 = (1n << 48n) - 1n;
@@ -80,6 +81,16 @@ const ERC20_ALLOWANCE_ABI = [
       { name: "spender", type: "address" },
     ],
     name: "allowance",
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
+
+const ERC20_BALANCE_ABI = [
+  {
+    inputs: [{ name: "account", type: "address" }],
+    name: "balanceOf",
     outputs: [{ type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -175,7 +186,7 @@ function buildV4SwapInputs(): { commands: Hex; inputs: Hex[] } {
   const currentConfig = {
     poolKey,
     zeroForOne,
-    amountIn: AMOUNT.toString(),
+    amountIn: SUPER_USDC_AMOUNT.toString(),
     amountOutMinimum: minAmountOut.toString(),
     hookData: "0x",
   };
@@ -222,6 +233,9 @@ async function main() {
     transport: http(rpcUrl),
   });
 
+  console.log("RFUSDC amount (6 decimals):", RFUSDC_AMOUNT.toString());
+  console.log("SuperFakeUSDC amount (18 decimals):", SUPER_USDC_AMOUNT.toString());
+
   const { commands, inputs } = buildV4SwapInputs();
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 300);
 
@@ -233,7 +247,7 @@ async function main() {
     encodeFunctionData({
       abi: RFUSDC_MINT_ABI,
       functionName: "mint",
-      args: [account.address, AMOUNT],
+      args: [account.address, RFUSDC_AMOUNT],
     }),
     "mint RFUSDC"
   );
@@ -246,7 +260,7 @@ async function main() {
     encodeFunctionData({
       abi: ERC20_APPROVE_ABI,
       functionName: "approve",
-      args: [SUPER_FAKE_USDC_ADDRESS as Address, AMOUNT],
+      args: [SUPER_FAKE_USDC_ADDRESS as Address, RFUSDC_AMOUNT],
     }),
     "approve RFUSDC -> Super Fake USDC"
   );
@@ -257,10 +271,25 @@ async function main() {
     encodeFunctionData({
       abi: SUPER_FAKE_USDC_UPGRADE_ABI,
       functionName: "upgrade",
-      args: [AMOUNT],
+      args: [SUPER_USDC_AMOUNT],
     }),
     "upgrade to Super Fake USDC"
   );
+
+  const rfusdcBalance = await publicClient.readContract({
+    address: RFUSDC_ADDRESS as Address,
+    abi: ERC20_BALANCE_ABI,
+    functionName: "balanceOf",
+    args: [account.address],
+  });
+  const superFakeBalance = await publicClient.readContract({
+    address: SUPER_FAKE_USDC_ADDRESS as Address,
+    abi: ERC20_BALANCE_ABI,
+    functionName: "balanceOf",
+    args: [account.address],
+  });
+  console.log("RFUSDC balance after upgrade:", rfusdcBalance);
+  console.log("Super Fake USDC balance after upgrade:", superFakeBalance);
 
   // 2) Approve Permit2 to spend Super Fake USDC
   await sendTx(
@@ -334,7 +363,7 @@ async function main() {
         success: true,
         swapTxHash: swapHash,
         account: account.address,
-        amountIn: AMOUNT.toString(),
+        amountIn: SUPER_USDC_AMOUNT.toString(),
         tokenIn: SUPER_FAKE_USDC_ADDRESS,
         tokenOut: TOKEN_OUT_ADDRESS,
         router: UNISWAP_UNIVERSAL_ROUTER_ADDRESS,

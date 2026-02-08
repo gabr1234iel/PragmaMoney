@@ -44,7 +44,8 @@ export async function handleSwap(input: SwapInput): Promise<string> {
     const tokenIn = SUPER_FAKE_USDC_ADDRESS as `0x${string}`;
     const tokenOut = BINGER_TOKEN_ADDRESS as `0x${string}`;
 
-    const amountRaw = 1_000_000n; // 1 RFUSDC (6 decimals)
+    const rfusdcAmount = 1_000_000n; // 1 RFUSDC (6 decimals)
+    const superUsdcAmount = rfusdcAmount * 1_000_000_000_000n; // scale to 18 decimals
     const minAmountOut = 1n;
 
     const poolKey = {
@@ -58,7 +59,7 @@ export async function handleSwap(input: SwapInput): Promise<string> {
     const currentConfig = {
       poolKey,
       zeroForOne: true,
-      amountIn: amountRaw.toString(),
+      amountIn: superUsdcAmount.toString(),
       amountOutMinimum: minAmountOut.toString(),
       hookData: "0x",
     };
@@ -87,11 +88,17 @@ export async function handleSwap(input: SwapInput): Promise<string> {
     const commands = normalizeHex(planner.commands);
     const inputs = planner.inputs.map((input: string) => normalizeHex(input));
 
-    // 1) Mint RFUSDC to the smart account (fixed 1e18)
+    // 1) Mint RFUSDC to the smart account
     await sendUserOp(
       registration.smartAccount as `0x${string}`,
       walletData.privateKey as `0x${string}`,
-      [buildMintCall(RFUSDC_ADDRESS as `0x${string}`, registration.smartAccount as `0x${string}`, amountRaw)],
+      [
+        buildMintCall(
+          RFUSDC_ADDRESS as `0x${string}`,
+          registration.smartAccount as `0x${string}`,
+          rfusdcAmount
+        ),
+      ],
       { skipSponsorship: true }
     );
 
@@ -99,7 +106,13 @@ export async function handleSwap(input: SwapInput): Promise<string> {
     await sendUserOp(
       registration.smartAccount as `0x${string}`,
       walletData.privateKey as `0x${string}`,
-      [buildApproveCall(RFUSDC_ADDRESS as `0x${string}`, SUPER_FAKE_USDC_ADDRESS as `0x${string}`, amountRaw)],
+      [
+        buildApproveCall(
+          RFUSDC_ADDRESS as `0x${string}`,
+          SUPER_FAKE_USDC_ADDRESS as `0x${string}`,
+          rfusdcAmount
+        ),
+      ],
       { skipSponsorship: true }
     );
 
@@ -107,7 +120,12 @@ export async function handleSwap(input: SwapInput): Promise<string> {
     await sendUserOp(
       registration.smartAccount as `0x${string}`,
       walletData.privateKey as `0x${string}`,
-      [buildUpgradeCall(SUPER_FAKE_USDC_ADDRESS as `0x${string}`, amountRaw)],
+      [
+        buildUpgradeCall(
+          SUPER_FAKE_USDC_ADDRESS as `0x${string}`,
+          superUsdcAmount
+        ),
+      ],
       { skipSponsorship: true }
     );
 
@@ -161,7 +179,7 @@ export async function handleSwap(input: SwapInput): Promise<string> {
       router,
       tokenIn,
       tokenOut,
-      amountIn: amountRaw.toString(),
+      amountIn: superUsdcAmount.toString(),
       deadline: null,
     });
   } catch (err: unknown) {
