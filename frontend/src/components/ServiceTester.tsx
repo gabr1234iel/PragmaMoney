@@ -227,9 +227,9 @@ export function ServiceTester({
               {Object.keys(response.headers).length > 0 && (
                 <div>
                   <p className="text-sm text-lobster-text mb-2">Response Headers</p>
-                  <div className="bg-lobster-surface rounded-xl p-4 font-mono text-xs space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
+                  <div className="bg-slate-900 rounded-xl p-4 font-mono text-xs space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
                     {Object.entries(response.headers).map(([key, value]) => (
-                      <div key={key} className="text-lobster-dark">
+                      <div key={key} className="text-slate-100">
                         <span className="text-lobster-primary">{key}:</span> {value}
                       </div>
                     ))}
@@ -240,7 +240,7 @@ export function ServiceTester({
               {/* Response Body */}
               <div>
                 <p className="text-sm text-lobster-text mb-2">Response Body</p>
-                <pre className="bg-lobster-surface rounded-xl p-4 font-mono text-xs text-lobster-dark overflow-x-auto custom-scrollbar max-h-96">
+                <pre className="bg-slate-900 text-slate-100 rounded-xl p-4 font-mono text-xs overflow-x-auto custom-scrollbar max-h-96">
                   {JSON.stringify(response.body, null, 2)}
                 </pre>
               </div>

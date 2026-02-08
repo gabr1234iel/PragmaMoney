@@ -3,12 +3,12 @@ import { Address } from "viem";
 // Contract addresses on Base Sepolia (deployed)
 // Real USDC — required by x402 facilitator (EIP-3009 support)
 export const USDC_ADDRESS: Address = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
-export const GATEWAY_ADDRESS: Address = "0xB2278aC78fB4EF96843Eb13D695B31b5Eb340231";
-export const SERVICE_REGISTRY_ADDRESS: Address = "0xC4820b30d60037DC2cdBeec46462eFcb8c08aCF0";
-export const AGENT_FACTORY_ADDRESS: Address = "0x1768632c7d4A5f84A0Dd62b7f7c691E90d7EBf94";
+export const GATEWAY_ADDRESS: Address = "0x59bda9849C4eB742eC7Bb2A0Ee61F84e1278168E";
+export const SERVICE_REGISTRY_ADDRESS: Address = "0x63B0997740B5828B3e58979D90AE5a6014988d55";
+export const AGENT_FACTORY_ADDRESS: Address = "0xf4E7B1B5B67C0E986312F3de580D291E21Fe6998";
 
 // AgentFactory (Launchpad pool factory) — deployed by DeployAgentFactory script
-export const AGENT_POOL_FACTORY_ADDRESS: Address = "0xcB016c9DC6c9bE4D6AaE84405B2686569F9cEc05";
+export const AGENT_POOL_FACTORY_ADDRESS: Address = "0x043254035CE6aef612491E30a16479fb51A1f8bA";
 
 export const AGENT_POOL_FACTORY_ABI = [
   {
@@ -55,13 +55,6 @@ export const AGENT_POOL_FACTORY_ABI = [
     ],
     outputs: [{ name: "pool", type: "address" }],
     stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "getPoolsByAgentId",
-    inputs: [{ name: "agentId", type: "uint256" }],
-    outputs: [{ name: "", type: "address[]" }],
-    stateMutability: "view",
   },
 ] as const;
 

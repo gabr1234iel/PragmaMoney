@@ -11,6 +11,9 @@ import {AgentFactory} from "../src/Launchpad/AgentFactory.sol";
 import {ReputationReporter} from "../src/ERC-8004/ReputationReporter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IIdentityRegistry} from "../src/interfaces/IIdentityRegistry.sol";
+import {IAgentFactory} from "../src/interfaces/IAgentFactory.sol";
+import {ScoreOracle} from "../src/ERC-8004/ScoreOracle.sol";
+import {IReputationRegistry} from "../src/interfaces/IReputationRegistry.sol";
 
 /// @title Deploy
 /// @notice Deployment script for PragmaMoney contracts on Base Sepolia
@@ -215,3 +218,117 @@ contract RedeployGatewayRealUSDC is Script {
 }
 
 // forge script script/Deploy.s.sol:RedeployGatewayRealUSDC --rpc-url base_sepolia --broadcast --verify -vvvv
+
+/// @title RedeployAll
+/// @notice Full redeployment of all PragmaMoney contracts on Base Sepolia.
+/// @dev Handles circular dependency: AgentFactory needs scoreOracle, ScoreOracle needs agentFactory.
+///      Solution: deploy AgentFactory with deployer as placeholder scoreOracle, then deploy ScoreOracle,
+///      then call setScoreOracle. Global contracts (IdentityRegistry, ReputationRegistry, EntryPoint, USDC)
+///      are NOT redeployed.
+contract RedeployAll is Script {
+    // ── Global addresses (NOT redeployed) ──
+    address constant IDENTITY_REGISTRY = 0x8004A818BFB912233c491871b3d84c89A494BD9e;
+    address constant REPUTATION_REGISTRY = 0x8004B663056A597Dffe9eCcC1965A193B7388713;
+    address constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
+    address constant REAL_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        address deployer = vm.addr(deployerPrivateKey);
+        address proxySigner = vm.envAddress("PROXY_SIGNER_ADDRESS");
+
+        console2.log("=== RedeployAll ===");
+        console2.log("Deployer:", deployer);
+        console2.log("Proxy signer:", proxySigner);
+        console2.log("");
+
+        vm.startBroadcast(deployerPrivateKey);
+
+        // 1. AgentSmartAccount implementation (no deps)
+        AgentSmartAccount accountImpl = new AgentSmartAccount();
+        console2.log("1. AgentSmartAccount impl:", address(accountImpl));
+
+        // 2. AgentAccountFactory (step1 + EntryPoint)
+        AgentAccountFactory accountFactory = new AgentAccountFactory(address(accountImpl), ENTRY_POINT);
+        console2.log("2. AgentAccountFactory:", address(accountFactory));
+
+        // 3. ReputationReporter implementation (no deps)
+        ReputationReporter reporterImpl = new ReputationReporter();
+        console2.log("3. ReputationReporter impl:", address(reporterImpl));
+
+        // 4. ReputationReporter ERC1967Proxy (step3, init with deployer as owner+admin)
+        bytes memory reporterInitData = abi.encodeCall(
+            ReputationReporter.initialize,
+            (deployer, deployer, REPUTATION_REGISTRY, IDENTITY_REGISTRY)
+        );
+        ERC1967Proxy reporterProxy = new ERC1967Proxy(address(reporterImpl), reporterInitData);
+        console2.log("4. ReputationReporter proxy:", address(reporterProxy));
+
+        // 5. AgentFactory (IdReg, deployer owner, deployer admin, deployer as placeholder scoreOracle, step4)
+        AgentFactory agentFactory = new AgentFactory(
+            IIdentityRegistry(IDENTITY_REGISTRY),
+            deployer,                   // owner
+            deployer,                   // admin
+            deployer,                   // scoreOracle placeholder (will be replaced in step 8)
+            address(reporterProxy)      // reputationReporter
+        );
+        console2.log("5. AgentFactory:", address(agentFactory));
+
+        // 6. Set AgentFactory as admin on ReputationReporter proxy
+        ReputationReporter(address(reporterProxy)).setAdmin(address(agentFactory));
+        console2.log("6. reporterProxy.setAdmin(agentFactory)");
+
+        // 7. ScoreOracle (RepReg, step5, step4, deployer owner, deployer admin)
+        ScoreOracle scoreOracle = new ScoreOracle(
+            IReputationRegistry(REPUTATION_REGISTRY),
+            IAgentFactory(address(agentFactory)),
+            address(reporterProxy),
+            deployer,                   // owner
+            deployer                    // admin
+        );
+        console2.log("7. ScoreOracle:", address(scoreOracle));
+
+        // 8. Resolve circular dep: set real ScoreOracle on AgentFactory
+        agentFactory.setScoreOracle(address(scoreOracle));
+        console2.log("8. agentFactory.setScoreOracle(scoreOracle)");
+
+        // 9. ServiceRegistry (deployer owner, IdReg, step5)
+        ServiceRegistry registry = new ServiceRegistry(deployer, IDENTITY_REGISTRY, address(agentFactory));
+        console2.log("9. ServiceRegistry:", address(registry));
+
+        // 10. x402Gateway (step9, USDC, IdReg, step5)
+        x402Gateway gateway = new x402Gateway(address(registry), REAL_USDC, IDENTITY_REGISTRY, address(agentFactory));
+        console2.log("10. x402Gateway:", address(gateway));
+
+        // 11. Authorize gateway on ServiceRegistry
+        registry.setGateway(address(gateway));
+        console2.log("11. registry.setGateway(gateway)");
+
+        // 12. Authorize proxy signer as recorder on ServiceRegistry
+        registry.setRecorder(proxySigner, true);
+        console2.log("12. registry.setRecorder(proxySigner)");
+
+        vm.stopBroadcast();
+
+        // ── Summary ──
+        console2.log("");
+        console2.log("=== Deployment Summary ===");
+        console2.log("AgentSmartAccount (impl):  ", address(accountImpl));
+        console2.log("AgentAccountFactory:       ", address(accountFactory));
+        console2.log("ReputationReporter (impl): ", address(reporterImpl));
+        console2.log("ReputationReporter (proxy):", address(reporterProxy));
+        console2.log("AgentFactory:              ", address(agentFactory));
+        console2.log("ScoreOracle:               ", address(scoreOracle));
+        console2.log("ServiceRegistry:           ", address(registry));
+        console2.log("x402Gateway:               ", address(gateway));
+        console2.log("");
+        console2.log("=== Globals (unchanged) ===");
+        console2.log("IdentityRegistry:          ", IDENTITY_REGISTRY);
+        console2.log("ReputationRegistry:        ", REPUTATION_REGISTRY);
+        console2.log("EntryPoint v0.7:           ", ENTRY_POINT);
+        console2.log("Real USDC:                 ", REAL_USDC);
+        console2.log("Proxy signer:              ", proxySigner);
+    }
+}
+
+// forge script script/Deploy.s.sol:RedeployAll --rpc-url base_sepolia --broadcast --verify -vvvv

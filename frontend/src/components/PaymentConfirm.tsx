@@ -73,8 +73,8 @@ export function PaymentConfirm({
       {/* Modal */}
       <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto custom-scrollbar">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-lobster-border px-6 py-4 flex justify-between items-center">
-          <h2 className="font-display text-2xl font-bold text-lobster-dark">
+        <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+          <h2 className="font-display text-2xl font-bold text-slate-900">
             Confirm Payment
           </h2>
           {!isProcessing && (
@@ -82,7 +82,7 @@ export function PaymentConfirm({
               onClick={handleClose}
               className="p-2 hover:bg-lobster-surface rounded-lg transition-colors duration-200"
             >
-              <X className="w-5 h-5 text-lobster-text" />
+              <X className="w-5 h-5 text-slate-500" />
             </button>
           )}
         </div>
@@ -92,34 +92,34 @@ export function PaymentConfirm({
           {success ? (
             <div className="text-center py-8">
               <CheckCircle className="w-16 h-16 text-[#0000ff] mx-auto mb-4" />
-              <h3 className="font-display text-xl font-semibold text-lobster-dark mb-2">
+              <h3 className="font-display text-xl font-semibold text-slate-900 mb-2">
                 Payment Successful!
               </h3>
-              <p className="text-sm text-lobster-text">
+              <p className="text-sm text-slate-500">
                 Your service call is being processed
               </p>
             </div>
           ) : (
             <>
               {/* Service Info */}
-              <div className="bg-lobster-surface rounded-xl p-4">
-                <h3 className="font-semibold text-lobster-dark mb-3">Service Details</h3>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <h3 className="font-semibold text-slate-900 mb-3">Service Details</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-lobster-text">Service:</span>
-                    <span className="font-medium text-lobster-dark">
+                    <span className="text-slate-500">Service:</span>
+                    <span className="font-medium text-slate-900">
                       {paymentInfo.service.name || "Unknown Service"}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-lobster-text">Price per Call:</span>
+                    <span className="text-slate-500">Price per Call:</span>
                     <span className="font-medium text-lobster-primary">
                       ${formatUSDC(paymentInfo.service.pricePerCall)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-lobster-text">Number of Calls:</span>
-                    <span className="font-medium text-lobster-dark">
+                    <span className="text-slate-500">Number of Calls:</span>
+                    <span className="font-medium text-slate-900">
                       {paymentInfo.calls}
                     </span>
                   </div>
@@ -136,10 +136,10 @@ export function PaymentConfirm({
               </div>
 
               {/* Balance Info */}
-              <div className="bg-lobster-bg rounded-xl p-4">
+              <div className="bg-slate-50 rounded-xl p-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-lobster-text">Your USDC Balance:</span>
-                  <span className="font-semibold text-lobster-dark">
+                  <span className="text-sm text-slate-500">Your USDC Balance:</span>
+                  <span className="font-semibold text-slate-900">
                     {usdcBalance ? `$${formatUSDC(usdcBalance.value)}` : "Loading..."}
                   </span>
                 </div>
@@ -154,7 +154,7 @@ export function PaymentConfirm({
               </div>
 
               {/* Gas Estimate */}
-              <div className="text-xs text-lobster-text text-center">
+              <div className="text-xs text-slate-400 text-center">
                 Estimated gas fees: ~$0.01 USD
               </div>
 
@@ -176,7 +176,7 @@ export function PaymentConfirm({
 
         {/* Footer */}
         {!success && (
-          <div className="sticky bottom-0 bg-white border-t border-lobster-border px-6 py-4 flex space-x-3">
+          <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex space-x-3">
             <button
               onClick={handleClose}
               disabled={isProcessing}

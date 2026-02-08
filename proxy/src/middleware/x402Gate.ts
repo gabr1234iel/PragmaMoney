@@ -26,7 +26,7 @@ import type {
 
 const GATEWAY_ABI = [
   "function verifyPayment(bytes32 paymentId) view returns (bool valid, address payer, uint256 amount)",
-  "function getPayment(bytes32 paymentId) view returns (tuple(address payer, bytes32 serviceId, uint256 calls, uint256 amount, uint256 timestamp))",
+  "function getPayment(bytes32 paymentId) view returns (tuple(address payer, bytes32 serviceId, uint256 calls, uint256 amount, bool valid))",
 ];
 
 const SERVICE_REGISTRY_ABI = [

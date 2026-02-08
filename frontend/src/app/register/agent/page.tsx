@@ -331,6 +331,10 @@ export default function RegisterAgentPage() {
         ],
       });
 
+      setPoolTx({ status: "pending", hash });
+
+      await publicClient!.waitForTransactionReceipt({ hash });
+
       setPoolTx({ status: "success", hash });
       setTimeout(() => setCurrentStep(5), 1000);
     } catch (err) {
