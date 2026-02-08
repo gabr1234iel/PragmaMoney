@@ -4,7 +4,9 @@ pragma solidity ^0.8.20;
 import {Test, console2} from "forge-std/Test.sol";
 import {AgentSmartAccount} from "../src/Wallet/AgentSmartAccount.sol";
 import {AgentAccountFactory} from "../src/Wallet/AgentAccountFactory.sol";
+import {IAgentAccountFactory} from "../src/Wallet/interfaces/IAgentAccountFactory.sol";
 import {SpendingPolicyLib} from "../src/Wallet/SpendingPolicyLib.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract AgentAccountFactoryTest is Test {
     AgentSmartAccount public implementation;
@@ -13,6 +15,7 @@ contract AgentAccountFactoryTest is Test {
     address public constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
     address public owner = makeAddr("owner");
     address public operator = makeAddr("operator");
+    address public stranger = makeAddr("stranger");
 
     bytes32 public constant AGENT_ID_1 = keccak256("agent-1");
     bytes32 public constant AGENT_ID_2 = keccak256("agent-2");
@@ -37,12 +40,12 @@ contract AgentAccountFactoryTest is Test {
     }
 
     function test_Constructor_RevertZeroImplementation() public {
-        vm.expectRevert(AgentAccountFactory.ZeroAddress.selector);
+        vm.expectRevert(IAgentAccountFactory.ZeroAddress.selector);
         new AgentAccountFactory(address(0), ENTRY_POINT);
     }
 
     function test_Constructor_RevertZeroEntryPoint() public {
-        vm.expectRevert(AgentAccountFactory.ZeroAddress.selector);
+        vm.expectRevert(IAgentAccountFactory.ZeroAddress.selector);
         new AgentAccountFactory(address(implementation), address(0));
     }
 
@@ -68,7 +71,7 @@ contract AgentAccountFactoryTest is Test {
         vm.expectEmit(true, true, true, true);
         // We need to predict the address for the event assertion
         address predicted = factory.getAddress(owner, AGENT_ID_1);
-        emit AgentAccountFactory.AccountCreated(predicted, owner, operator, AGENT_ID_1);
+        emit IAgentAccountFactory.AccountCreated(predicted, owner, operator, AGENT_ID_1);
 
         factory.createAccount(owner, operator, AGENT_ID_1, DAILY_LIMIT, expiresAt);
     }
@@ -144,5 +147,77 @@ contract AgentAccountFactoryTest is Test {
         assertEq(acct.owner(), _owner);
         assertEq(acct.operator(), _operator);
         assertEq(acct.agentId(), _agentId);
+    }
+
+    // ==================== Trusted Contracts ====================
+
+    function test_TrustedContract_InitiallyFalse() public {
+        address target = makeAddr("target");
+        assertFalse(factory.isTrustedContract(target));
+    }
+
+    function test_TrustedContract_OwnerCanSet() public {
+        address target = makeAddr("target");
+
+        factory.setTrustedContract(target, true);
+        assertTrue(factory.isTrustedContract(target));
+
+        factory.setTrustedContract(target, false);
+        assertFalse(factory.isTrustedContract(target));
+    }
+
+    function test_TrustedContract_StrangerCannotSet() public {
+        address target = makeAddr("target");
+
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
+        factory.setTrustedContract(target, true);
+    }
+
+    function test_TrustedContract_EmitsEvent() public {
+        address target = makeAddr("target");
+
+        vm.expectEmit(true, false, false, true);
+        emit IAgentAccountFactory.TrustedContractSet(target, true);
+        factory.setTrustedContract(target, true);
+    }
+
+    // ==================== Trusted Tokens ====================
+
+    function test_TrustedToken_InitiallyFalse() public {
+        address token = makeAddr("token");
+        assertFalse(factory.isTrustedToken(token));
+    }
+
+    function test_TrustedToken_OwnerCanSet() public {
+        address token = makeAddr("token");
+
+        factory.setTrustedToken(token, true);
+        assertTrue(factory.isTrustedToken(token));
+
+        factory.setTrustedToken(token, false);
+        assertFalse(factory.isTrustedToken(token));
+    }
+
+    function test_TrustedToken_StrangerCannotSet() public {
+        address token = makeAddr("token");
+
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
+        factory.setTrustedToken(token, true);
+    }
+
+    function test_TrustedToken_EmitsEvent() public {
+        address token = makeAddr("token");
+
+        vm.expectEmit(true, false, false, true);
+        emit IAgentAccountFactory.TrustedTokenSet(token, true);
+        factory.setTrustedToken(token, true);
+    }
+
+    // ==================== Ownership ====================
+
+    function test_Owner_IsDeployer() public view {
+        assertEq(factory.owner(), address(this));
     }
 }

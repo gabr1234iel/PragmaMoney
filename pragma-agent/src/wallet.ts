@@ -13,7 +13,17 @@ import {
 // ─── Wallet file management ──────────────────────────────────────────────────
 
 const WALLET_DIR = path.join(os.homedir(), ".openclaw", "pragma-agent");
-const WALLET_FILE = path.join(WALLET_DIR, "wallet.json");
+const DEFAULT_WALLET_FILE = "wallet.json";
+
+/**
+ * Get the full path for a wallet file.
+ */
+function getWalletPath(filename: string = DEFAULT_WALLET_FILE): string {
+  return path.join(WALLET_DIR, filename);
+}
+
+// Backward compatibility
+const WALLET_FILE = getWalletPath();
 
 interface Registration {
   agentId: string;
@@ -32,13 +42,12 @@ interface WalletData {
 }
 
 /**
- * Load or create the agent wallet. On first run, generates a random private key
- * and saves it to ~/.openclaw/pragma-agent/wallet.json. On subsequent runs,
- * loads from the saved file.
+ * Load or create a wallet from a specific file.
  */
-function loadOrCreateWallet(): WalletData {
-  if (fs.existsSync(WALLET_FILE)) {
-    const raw = fs.readFileSync(WALLET_FILE, "utf-8");
+function loadOrCreateWalletByFile(filename: string): WalletData {
+  const walletPath = getWalletPath(filename);
+  if (fs.existsSync(walletPath)) {
+    const raw = fs.readFileSync(walletPath, "utf-8");
     const data = JSON.parse(raw) as WalletData;
     // Handle legacy wallet files without registration field
     if (data.registration === undefined) {
@@ -57,8 +66,35 @@ function loadOrCreateWallet(): WalletData {
   };
 
   fs.mkdirSync(WALLET_DIR, { recursive: true });
-  fs.writeFileSync(WALLET_FILE, JSON.stringify(data, null, 2), "utf-8");
+  fs.writeFileSync(walletPath, JSON.stringify(data, null, 2), "utf-8");
   return data;
+}
+
+/**
+ * Save registration data to a specific wallet file.
+ */
+function saveRegistrationByFile(filename: string, reg: Registration): void {
+  const data = loadOrCreateWalletByFile(filename);
+  data.registration = reg;
+  const walletPath = getWalletPath(filename);
+  fs.writeFileSync(walletPath, JSON.stringify(data, null, 2), "utf-8");
+}
+
+/**
+ * Get registration data from a specific wallet file.
+ */
+function getRegistrationByFile(filename: string): Registration | null {
+  const data = loadOrCreateWalletByFile(filename);
+  return data.registration;
+}
+
+/**
+ * Load or create the agent wallet. On first run, generates a random private key
+ * and saves it to ~/.openclaw/pragma-agent/wallet.json. On subsequent runs,
+ * loads from the saved file.
+ */
+function loadOrCreateWallet(): WalletData {
+  return loadOrCreateWalletByFile(DEFAULT_WALLET_FILE);
 }
 
 /**
@@ -248,5 +284,15 @@ export const walletSchema = {
   },
 };
 
-export { getSignerWallet, loadOrCreateWallet, saveRegistration, getRegistration, requireRegistration };
+export {
+  getSignerWallet,
+  loadOrCreateWallet,
+  loadOrCreateWalletByFile,
+  saveRegistration,
+  saveRegistrationByFile,
+  getRegistration,
+  getRegistrationByFile,
+  requireRegistration,
+  getWalletPath,
+};
 export type { Registration, WalletData };

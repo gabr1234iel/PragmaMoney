@@ -10,6 +10,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {SpendingPolicyLib} from "./SpendingPolicyLib.sol";
+import {IAgentAccountFactory} from "./interfaces/IAgentAccountFactory.sol";
 import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "account-abstraction/core/Helpers.sol";
 
 /// @title AgentSmartAccount
@@ -17,6 +18,7 @@ import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "account-abstraction
 /// @dev Designed to be deployed via minimal clones (ERC-1167) through AgentAccountFactory.
 ///      The owner controls the policy; the operator signs UserOps on behalf of the agent.
 ///      All transactions are validated against the spending policy before execution.
+///      Target/token validation checks: 1) per-agent allowlist, 2) global trusted (factory), 3) factory accounts
 contract AgentSmartAccount is BaseAccount, Initializable {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
@@ -186,8 +188,8 @@ contract AgentSmartAccount is BaseAccount, Initializable {
             (address dest, uint256 value, bytes memory func) =
                 abi.decode(callData[4:], (address, uint256, bytes));
 
-            // 3. Validate target
-            if (!allowedTargets[dest]) {
+            // 3. Validate target (per-agent allowlist OR global trusted OR factory account)
+            if (!_isTargetAllowed(dest)) {
                 return SIG_VALIDATION_FAILED;
             }
 
@@ -203,8 +205,8 @@ contract AgentSmartAccount is BaseAccount, Initializable {
                     innerSelector == TRANSFER_SELECTOR ||
                     innerSelector == APPROVE_SELECTOR
                 ) {
-                    // Token is the dest address
-                    if (!allowedTokens[dest]) {
+                    // Token is the dest address - validate token allowlist
+                    if (!_isTokenAllowed(dest)) {
                         return SIG_VALIDATION_FAILED;
                     }
 
@@ -214,7 +216,7 @@ contract AgentSmartAccount is BaseAccount, Initializable {
                         spendAmount += tokenAmount;
                     }
                 } else if (innerSelector == TRANSFER_FROM_SELECTOR) {
-                    if (!allowedTokens[dest]) {
+                    if (!_isTokenAllowed(dest)) {
                         return SIG_VALIDATION_FAILED;
                     }
 
@@ -271,7 +273,8 @@ contract AgentSmartAccount is BaseAccount, Initializable {
 
             uint256 totalSpend;
             for (uint256 i; i < dests.length;) {
-                if (!allowedTargets[dests[i]]) {
+                // Validate target (per-agent allowlist OR global trusted OR factory account)
+                if (!_isTargetAllowed(dests[i])) {
                     return SIG_VALIDATION_FAILED;
                 }
 
@@ -288,7 +291,8 @@ contract AgentSmartAccount is BaseAccount, Initializable {
                         innerSel == TRANSFER_SELECTOR ||
                         innerSel == APPROVE_SELECTOR
                     ) {
-                        if (!allowedTokens[dests[i]]) {
+                        // Validate token allowlist
+                        if (!_isTokenAllowed(dests[i])) {
                             return SIG_VALIDATION_FAILED;
                         }
                         if (f.length >= 68) {
@@ -409,12 +413,12 @@ contract AgentSmartAccount is BaseAccount, Initializable {
         return dailySpend;
     }
 
-    /// @notice Check if a target is allowed
+    /// @notice Check if a target is allowed (per-agent allowlist only, does not check global)
     function isTargetAllowed(address target) external view returns (bool) {
         return allowedTargets[target];
     }
 
-    /// @notice Check if a token is allowed
+    /// @notice Check if a token is allowed (per-agent allowlist only, does not check global)
     function isTokenAllowed(address token) external view returns (bool) {
         return allowedTokens[token];
     }
@@ -436,6 +440,69 @@ contract AgentSmartAccount is BaseAccount, Initializable {
     }
 
     // -- Internal helpers --
+
+    /// @notice Check if a target is allowed via: 1) per-agent allowlist, 2) global trusted, 3) factory account
+    /// @param target The target address to check
+    /// @return allowed Whether the target is allowed
+    function _isTargetAllowed(address target) internal view returns (bool) {
+        // 1. Per-agent allowlist
+        if (allowedTargets[target]) {
+            return true;
+        }
+
+        // 2. Global trusted contracts (from factory)
+        if (factory != address(0)) {
+            try IAgentAccountFactory(factory).isTrustedContract(target) returns (bool trusted) {
+                if (trusted) {
+                    return true;
+                }
+            } catch {
+                // Factory call failed, continue to next check
+            }
+        }
+
+        // 3. Factory-created accounts (agent-to-agent)
+        if (_isFactoryAccount(target)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// @notice Check if a token is allowed via: 1) per-agent allowlist, 2) global trusted
+    /// @param token The token address to check
+    /// @return allowed Whether the token is allowed
+    function _isTokenAllowed(address token) internal view returns (bool) {
+        // 1. Per-agent allowlist
+        if (allowedTokens[token]) {
+            return true;
+        }
+
+        // 2. Global trusted tokens (from factory)
+        if (factory != address(0)) {
+            try IAgentAccountFactory(factory).isTrustedToken(token) returns (bool trusted) {
+                if (trusted) {
+                    return true;
+                }
+            } catch {
+                // Factory call failed
+            }
+        }
+
+        return false;
+    }
+
+    /// @notice Check if target is a factory-created AgentSmartAccount
+    /// @param target The address to check
+    /// @return True if target is a factory-created account
+    function _isFactoryAccount(address target) internal view returns (bool) {
+        if (target.code.length == 0) return false;
+        try AgentSmartAccount(payable(target)).isFactoryAccount() returns (bool ok) {
+            return ok;
+        } catch {
+            return false;
+        }
+    }
 
     /// @dev Slice bytes from an offset (used to strip function selector from inner calldata)
     function _sliceBytes(bytes memory data, uint256 start) internal pure returns (bytes memory) {

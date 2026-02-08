@@ -133,10 +133,7 @@ export async function handlePay(input: PayInput): Promise<string> {
         if (Number.isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
           return JSON.stringify({ error: "score must be between 0 and 100" });
         }
-        if (
-          !REPUTATION_REPORTER_ADDRESS ||
-          REPUTATION_REPORTER_ADDRESS === "0x781eff1D46A999d71DBEd76aD9fA1BcB104F32cb"
-        ) {
+        if (!REPUTATION_REPORTER_ADDRESS) {
           return JSON.stringify({ error: "REPUTATION_REPORTER_ADDRESS is not configured" });
         }
 

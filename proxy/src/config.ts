@@ -21,6 +21,7 @@ export interface Config {
   superRealFakeUsdcAddress: string;
   bingerTokenAddress: string;
   rfusdcAddress: string;
+  reputationReporterAddress: string;
 }
 
 function parseOrigins(raw: string | undefined): string[] {
@@ -37,10 +38,10 @@ export const config: Config = {
     process.env.FACILITATOR_URL || "https://x402.org/facilitator",
   gatewayAddress:
     process.env.GATEWAY_ADDRESS ||
-    "0x59bda9849C4eB742eC7Bb2A0Ee61F84e1278168E",
+    "0x112B51549AeaF1456E2C04aAE92bC9660b604101",
   serviceRegistryAddress:
     process.env.SERVICE_REGISTRY_ADDRESS ||
-    "0x63B0997740B5828B3e58979D90AE5a6014988d55",
+    "0x70B74F9D67385d363d4bdd3079b72E60f8EcbaFa",
   gatewayRpcUrl:
     process.env.GATEWAY_RPC_URL || "https://sepolia.base.org",
   usdcAddress:
@@ -53,9 +54,9 @@ export const config: Config = {
   identityRegistryAddress:
     process.env.IDENTITY_REGISTRY_ADDRESS || "0x8004A818BFB912233c491871b3d84c89A494BD9e",
   agentAccountFactoryAddress:
-    process.env.AGENT_ACCOUNT_FACTORY_ADDRESS || "0xf4E7B1B5B67C0E986312F3de580D291E21Fe6998",
+    process.env.AGENT_ACCOUNT_FACTORY_ADDRESS || "0x074d7Bd79eFd2170851435D1bECCC230dB1E151b",
   agentPoolFactoryAddress:
-    process.env.AGENT_POOL_FACTORY_ADDRESS || "0x043254035CE6aef612491E30a16479fb51A1f8bA",
+    process.env.AGENT_POOL_FACTORY_ADDRESS || "0x92B5CF0B3D017455e7546AE2473C4711F1f23861",
   fundAmountEoa: process.env.FUND_AMOUNT_EOA || "0.0005",
   uniswapUniversalRouterAddress:
     process.env.UNISWAP_UNIVERSAL_ROUTER_ADDRESS ||
@@ -68,4 +69,6 @@ export const config: Config = {
     "0xC8308c6bc561A46275256981dd17298c31300595",
   rfusdcAddress:
     process.env.RFUSDC_ADDRESS || "0x8ac2EeF8EA8f63bc6109c22f7c505962B96cEab0",
+  reputationReporterAddress:
+    process.env.REPUTATION_REPORTER_ADDRESS || "0xC038404e1fe7dc1FBD19773dB922ced6E2a896B8",
 };

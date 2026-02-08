@@ -2,41 +2,36 @@
 pragma solidity ^0.8.20;
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AgentSmartAccount} from "./AgentSmartAccount.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
+import {IAgentAccountFactory} from "./interfaces/IAgentAccountFactory.sol";
 
 /// @title AgentAccountFactory
 /// @notice Factory for deploying AgentSmartAccount clones via ERC-1167 minimal proxies
 /// @dev Uses CREATE2 (cloneDeterministic) so addresses can be predicted before deployment.
 ///      The salt is derived from (owner, agentId) to ensure uniqueness per owner-agent pair.
-contract AgentAccountFactory {
+///      Also manages global trusted contracts/tokens that all agent accounts can access.
+contract AgentAccountFactory is IAgentAccountFactory, Ownable {
     // -- State --
 
     /// @notice The AgentSmartAccount implementation contract (logic target for clones)
-    address public immutable implementation;
+    address public immutable override implementation;
 
     /// @notice The canonical EntryPoint address
-    IEntryPoint public immutable entryPoint;
+    IEntryPoint public immutable override entryPoint;
 
-    // -- Events --
+    /// @notice Mapping of globally trusted contract addresses (bypass per-agent allowlists)
+    mapping(address => bool) public trustedContracts;
 
-    event AccountCreated(
-        address indexed account,
-        address indexed owner,
-        address indexed operator,
-        bytes32 agentId
-    );
-
-    // -- Custom errors --
-
-    error AccountAlreadyExists(address account);
-    error ZeroAddress();
+    /// @notice Mapping of globally trusted token addresses (bypass per-agent token allowlists)
+    mapping(address => bool) public trustedTokens;
 
     // -- Constructor --
 
     /// @param _implementation Address of the deployed AgentSmartAccount implementation
     /// @param _entryPoint Address of the canonical ERC-4337 EntryPoint
-    constructor(address _implementation, address _entryPoint) {
+    constructor(address _implementation, address _entryPoint) Ownable(msg.sender) {
         if (_implementation == address(0) || _entryPoint == address(0)) {
             revert ZeroAddress();
         }
@@ -46,20 +41,14 @@ contract AgentAccountFactory {
 
     // -- External functions --
 
-    /// @notice Deploy a new AgentSmartAccount clone
-    /// @param owner_ The owner address (controls policy)
-    /// @param operator_ The operator address (signs UserOps)
-    /// @param agentId_ Unique identifier for the agent
-    /// @param dailyLimit_ Maximum daily spending in token base units
-    /// @param expiresAt_ Unix timestamp when the account expires
-    /// @return account The address of the newly deployed smart account
+    /// @inheritdoc IAgentAccountFactory
     function createAccount(
         address owner_,
         address operator_,
         bytes32 agentId_,
         uint256 dailyLimit_,
         uint256 expiresAt_
-    ) external returns (address account) {
+    ) external override returns (address account) {
         bytes32 salt = _computeSalt(owner_, agentId_);
 
         // Deploy the minimal proxy clone with CREATE2
@@ -77,13 +66,32 @@ contract AgentAccountFactory {
         emit AccountCreated(account, owner_, operator_, agentId_);
     }
 
-    /// @notice Predict the address of a clone without deploying
-    /// @param owner_ The owner address
-    /// @param agentId_ The agent identifier
-    /// @return predicted The predicted clone address
-    function getAddress(address owner_, bytes32 agentId_) external view returns (address predicted) {
+    /// @inheritdoc IAgentAccountFactory
+    function getAddress(address owner_, bytes32 agentId_) external view override returns (address predicted) {
         bytes32 salt = _computeSalt(owner_, agentId_);
         return Clones.predictDeterministicAddress(implementation, salt, address(this));
+    }
+
+    /// @inheritdoc IAgentAccountFactory
+    function setTrustedContract(address target, bool trusted) external override onlyOwner {
+        trustedContracts[target] = trusted;
+        emit TrustedContractSet(target, trusted);
+    }
+
+    /// @inheritdoc IAgentAccountFactory
+    function setTrustedToken(address token, bool trusted) external override onlyOwner {
+        trustedTokens[token] = trusted;
+        emit TrustedTokenSet(token, trusted);
+    }
+
+    /// @inheritdoc IAgentAccountFactory
+    function isTrustedContract(address target) external view override returns (bool) {
+        return trustedContracts[target];
+    }
+
+    /// @inheritdoc IAgentAccountFactory
+    function isTrustedToken(address token) external view override returns (bool) {
+        return trustedTokens[token];
     }
 
     // -- Internal functions --

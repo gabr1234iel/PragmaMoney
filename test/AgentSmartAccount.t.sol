@@ -519,4 +519,183 @@ contract AgentSmartAccountTest is Test {
         assertEq(policyBefore.expiresAt, policyAfter.expiresAt);
         assertEq(dailyBefore.amount, dailyAfter.amount);
     }
+
+    // ==================== Global Trusted Contracts ====================
+
+    function test_GlobalTrusted_TargetBypassesAllowlist() public {
+        // Create a new target that is NOT in per-agent allowlist
+        address globalTarget = makeAddr("globalTarget");
+        assertFalse(account.isTargetAllowed(globalTarget));
+
+        // Set it as globally trusted on the factory
+        factory.setTrustedContract(globalTarget, true);
+
+        // Build a UserOp calling the global target
+        bytes memory callData = abi.encodeWithSelector(
+            account.execute.selector,
+            globalTarget,
+            0,
+            "" // empty call
+        );
+
+        // Sign with operator
+        bytes32 userOpHash = keccak256(callData);
+        bytes32 ethSignedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", userOpHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(operatorKey, ethSignedHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        PackedUserOperation memory op = PackedUserOperation({
+            sender: address(account),
+            nonce: 0,
+            initCode: "",
+            callData: callData,
+            accountGasLimits: bytes32(0),
+            preVerificationGas: 0,
+            gasFees: bytes32(0),
+            paymasterAndData: "",
+            signature: signature
+        });
+
+        // Validate via EntryPoint - should succeed because target is globally trusted
+        vm.prank(ENTRY_POINT);
+        uint256 validation = account.validateUserOp(op, userOpHash, 0);
+        assertEq(validation, 0, "Global trusted target should pass validation");
+    }
+
+    function test_GlobalTrusted_TokenBypassesAllowlist() public {
+        // Deploy a new mock token that is NOT in per-agent token allowlist
+        MockERC20 newToken = new MockERC20("New Token", "NEW", 6);
+        newToken.mint(address(account), 1000e6);
+
+        // Verify it's not in per-agent allowlist
+        assertFalse(account.isTokenAllowed(address(newToken)));
+
+        // Set the token as globally trusted (both as target and token)
+        factory.setTrustedContract(address(newToken), true);
+        factory.setTrustedToken(address(newToken), true);
+
+        // Build a transfer call
+        address recipient = makeAddr("recipient");
+        bytes memory transferData = abi.encodeWithSelector(
+            newToken.transfer.selector,
+            recipient,
+            10e6
+        );
+        bytes memory callData = abi.encodeWithSelector(
+            account.execute.selector,
+            address(newToken),
+            0,
+            transferData
+        );
+
+        // Sign with operator
+        bytes32 userOpHash = keccak256(callData);
+        bytes32 ethSignedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", userOpHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(operatorKey, ethSignedHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        PackedUserOperation memory op = PackedUserOperation({
+            sender: address(account),
+            nonce: 0,
+            initCode: "",
+            callData: callData,
+            accountGasLimits: bytes32(0),
+            preVerificationGas: 0,
+            gasFees: bytes32(0),
+            paymasterAndData: "",
+            signature: signature
+        });
+
+        // Validate via EntryPoint - should succeed
+        vm.prank(ENTRY_POINT);
+        uint256 validation = account.validateUserOp(op, userOpHash, 0);
+        assertEq(validation, 0, "Global trusted token should pass validation");
+    }
+
+    function test_GlobalTrusted_UntrustedTargetStillFails() public {
+        // Create a target that is neither in per-agent allowlist nor globally trusted
+        address untrustedTarget = makeAddr("untrustedTarget");
+        assertFalse(account.isTargetAllowed(untrustedTarget));
+        assertFalse(factory.isTrustedContract(untrustedTarget));
+
+        // Build a UserOp calling the untrusted target
+        bytes memory callData = abi.encodeWithSelector(
+            account.execute.selector,
+            untrustedTarget,
+            0,
+            ""
+        );
+
+        // Sign with operator
+        bytes32 userOpHash = keccak256(callData);
+        bytes32 ethSignedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", userOpHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(operatorKey, ethSignedHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        PackedUserOperation memory op = PackedUserOperation({
+            sender: address(account),
+            nonce: 0,
+            initCode: "",
+            callData: callData,
+            accountGasLimits: bytes32(0),
+            preVerificationGas: 0,
+            gasFees: bytes32(0),
+            paymasterAndData: "",
+            signature: signature
+        });
+
+        // Validate via EntryPoint - should FAIL (return 1)
+        vm.prank(ENTRY_POINT);
+        uint256 validation = account.validateUserOp(op, userOpHash, 0);
+        assertEq(validation, 1, "Untrusted target should fail validation");
+    }
+
+    function test_GlobalTrusted_BatchWithMixedTargets() public {
+        // One target is globally trusted, one is per-agent allowed
+        address globalTarget = makeAddr("globalTarget");
+        factory.setTrustedContract(globalTarget, true);
+
+        // Build batch call with both USDC (per-agent allowed) and globalTarget
+        address[] memory dests = new address[](2);
+        dests[0] = address(usdc); // per-agent allowed
+        dests[1] = globalTarget;  // globally trusted
+
+        uint256[] memory values = new uint256[](2);
+        values[0] = 0;
+        values[1] = 0;
+
+        bytes[] memory funcs = new bytes[](2);
+        funcs[0] = abi.encodeWithSelector(usdc.transfer.selector, makeAddr("r1"), 1e6);
+        funcs[1] = ""; // empty call
+
+        bytes memory callData = abi.encodeWithSelector(
+            account.executeBatch.selector,
+            dests,
+            values,
+            funcs
+        );
+
+        // Sign with operator
+        bytes32 userOpHash = keccak256(callData);
+        bytes32 ethSignedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", userOpHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(operatorKey, ethSignedHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        PackedUserOperation memory op = PackedUserOperation({
+            sender: address(account),
+            nonce: 0,
+            initCode: "",
+            callData: callData,
+            accountGasLimits: bytes32(0),
+            preVerificationGas: 0,
+            gasFees: bytes32(0),
+            paymasterAndData: "",
+            signature: signature
+        });
+
+        // Validate - should succeed since both targets are allowed (one per-agent, one global)
+        vm.prank(ENTRY_POINT);
+        uint256 validation = account.validateUserOp(op, userOpHash, 0);
+        assertEq(validation, 0, "Batch with mixed allowed targets should pass");
+    }
 }

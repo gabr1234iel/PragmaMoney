@@ -395,10 +395,12 @@ export async function sendUserOp(
       ENTRYPOINT_ADDRESS,
     ]);
 
+    // Increase gas multipliers to account for external calls in _isTargetAllowed()
+    // which checks global trusted contracts on the factory
     sponsoredUserOp = {
       ...unsignedUserOp,
       callGasLimit: BigInt(gasEstimate.callGasLimit) * 2n,
-      verificationGasLimit: BigInt(gasEstimate.verificationGasLimit) * 2n,
+      verificationGasLimit: BigInt(gasEstimate.verificationGasLimit) * 4n, // 4x for factory calls
       preVerificationGas: BigInt(gasEstimate.preVerificationGas) * 2n,
       paymaster: undefined,
       paymasterVerificationGasLimit: undefined,

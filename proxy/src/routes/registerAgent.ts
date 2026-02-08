@@ -25,6 +25,7 @@ const AGENT_SMART_ACCOUNT_ABI = [
 const AGENT_POOL_FACTORY_ABI = [
   "function createAgentPool(uint256 agentId, address agentWallet, tuple(string agentURI, address asset, string name, string symbol, address poolOwner, uint256 dailyCap, uint64 vestingDuration, string metadataURI) params) returns (address)",
 ];
+// Note: AgentFactory.createAgentPool automatically calls ReputationReporter.setReporter(agentAccount, true)
 
 // ---------------------------------------------------------------------------
 // Pending registration storage (keyed by operatorAddress)
@@ -256,96 +257,12 @@ registerAgentRouter.post("/setup", async (req: Request, res: Response) => {
     const smartAccountAddress: string = await factory["getAddress(address,bytes32)"](deployerAddress, agentIdBytes32);
     console.log(`[register-agent/setup] Smart account: ${smartAccountAddress}, tx=${createReceipt.hash}`);
 
-    // Wait for RPC state propagation (createAccount and setTargetAllowed in
-    // the same block can race on load-balanced RPCs)
-    console.log(`[register-agent/setup] Waiting 3s for RPC state propagation...`);
-    await new Promise((r) => setTimeout(r, 3000));
+    // NOTE: No per-agent setTargetAllowed/setTokenAllowed calls needed here!
+    // All system contracts (gateway, USDC, serviceRegistry, uniswapRouter, tokens, reputationReporter)
+    // are now globally trusted on AgentAccountFactory. Only the per-agent pool address
+    // (created in /finalize) needs individual allowlisting.
 
-    // ---- Step 2: Configure smart account targets ----
-    const smartAccount = new Contract(
-      smartAccountAddress,
-      AGENT_SMART_ACCOUNT_ABI,
-      deployer,
-    );
-
-    // Retry setTargetAllowed — stale RPC nodes may not yet see the clone
-    let n2 = allocateNonce();
-    console.log(`[register-agent/setup] Configuring targets... (nonce=${n2})`);
-    let allowGatewayTx;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        allowGatewayTx = await smartAccount.setTargetAllowed(config.gatewayAddress, true, { nonce: n2 });
-        const gwReceipt = await allowGatewayTx.wait();
-        if (gwReceipt.status === 1) break;
-        throw new Error("setTargetAllowed reverted");
-      } catch (err) {
-        if (attempt < 2) {
-          console.log(`[register-agent/setup] setTargetAllowed attempt ${attempt + 1} failed, retrying in 3s...`);
-          await new Promise((r) => setTimeout(r, 3000));
-          n2 = allocateNonce();
-        } else {
-          throw err;
-        }
-      }
-    }
-
-    const n3 = allocateNonce();
-    const allowUsdcTargetTx = await smartAccount.setTargetAllowed(config.usdcAddress, true, { nonce: n3 });
-    await allowUsdcTargetTx.wait();
-
-    const n4 = allocateNonce();
-    const allowUsdcTokenTx = await smartAccount.setTokenAllowed(config.usdcAddress, true, { nonce: n4 });
-    await allowUsdcTokenTx.wait();
-
-    const n5 = allocateNonce();
-    const allowRegistryTx = await smartAccount.setTargetAllowed(config.serviceRegistryAddress, true, { nonce: n5 });
-    const allowRegistryReceipt = await allowRegistryTx.wait();
-    txHashes.setTargets = allowRegistryReceipt.hash;
-    console.log(`[register-agent/setup] setTargets done (gateway, USDC, ServiceRegistry)`);
-
-    const n6 = allocateNonce();
-    const allowUniversalRouterTx = await smartAccount.setTargetAllowed(
-      config.uniswapUniversalRouterAddress,
-      true,
-      { nonce: n6 },
-    );
-    await allowUniversalRouterTx.wait();
-
-    const n7 = allocateNonce();
-    const allowTokenInTx = await smartAccount.setTokenAllowed(
-      config.superRealFakeUsdcAddress,
-      true,
-      { nonce: n7 },
-    );
-    await allowTokenInTx.wait();
-
-    const n8 = allocateNonce();
-    const allowTokenOutTx = await smartAccount.setTokenAllowed(
-      config.bingerTokenAddress,
-      true,
-      { nonce: n8 },
-    );
-    await allowTokenOutTx.wait();
-    console.log(
-      `[register-agent/setup] allowed Uniswap router + tokens (in/out)`,
-    );
-
-    const n9 = allocateNonce();
-    const allowFusdcTargetTx = await smartAccount.setTargetAllowed(
-      config.rfusdcAddress,
-      true,
-      { nonce: n9 },
-    );
-    await allowFusdcTargetTx.wait();
-
-    const n10 = allocateNonce();
-    const allowFusdcTokenTx = await smartAccount.setTokenAllowed(
-      config.rfusdcAddress,
-      true,
-      { nonce: n10 },
-    );
-    await allowFusdcTokenTx.wait();
-    console.log(`[register-agent/setup] allowed FUSDC target + token`);
+    console.log(`[register-agent/setup] System targets are globally trusted, no per-agent setup needed.`);
 
     // Store smart account address for /finalize phase
     pending.smartAccountAddress = smartAccountAddress;
@@ -509,6 +426,7 @@ registerAgentRouter.post("/finalize", async (req: Request, res: Response) => {
     }
 
     // ---- Step 3: Fund smart account with ETH for self-pay UserOps ----
+    // Note: AgentFactory.createAgentPool already registered the smart account as a reporter
     const fundAmount = ethers.parseEther(config.fundAmountEoa);
     const n3 = allocateNonce();
     console.log(`[register-agent/finalize] Funding smart account ${smartAccountAddress} with ${config.fundAmountEoa} ETH... (nonce=${n3})`);
