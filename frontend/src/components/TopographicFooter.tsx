@@ -36,7 +36,7 @@ export default function TopographicFooter() {
                 </h2>
 
                 <div className="grid md:grid-cols-2 gap-8">
-                    <Link href="/manual-verification/marketplace" className="group relative block p-12 bg-white rounded-none border border-black/10 hover:border-black transition-all duration-300 hover:shadow-2xl">
+                    <Link href="/marketplace" className="group relative block p-12 bg-white rounded-none border border-black/10 hover:border-black transition-all duration-300 hover:shadow-2xl">
                         <div className="mb-8">
                             <Box className="w-12 h-12 text-pragma-primary" />
                         </div>
@@ -47,7 +47,7 @@ export default function TopographicFooter() {
                         <p className="text-black/60 text-lg">Browse available agent services and AI capabilities.</p>
                     </Link>
 
-                    <Link href="/manual-verification/register" className="group relative block p-12 bg-black text-white rounded-none border border-black hover:bg-pragma-primary hover:border-pragma-primary transition-all duration-300 hover:shadow-2xl">
+                    <Link href="/register" className="group relative block p-12 bg-black text-white rounded-none border border-black hover:bg-pragma-primary hover:border-pragma-primary transition-all duration-300 hover:shadow-2xl">
                         <div className="mb-8">
                             <Terminal className="w-12 h-12 text-white" />
                         </div>

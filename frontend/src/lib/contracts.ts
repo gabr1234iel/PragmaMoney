@@ -306,7 +306,7 @@ export const AGENT_SMART_ACCOUNT_ABI = [
   },
   {
     inputs: [{ name: "target", type: "address" }],
-    name: "getAllowedTarget",
+    name: "isTargetAllowed",
     outputs: [{ name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
