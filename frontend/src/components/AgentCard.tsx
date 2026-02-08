@@ -3,6 +3,7 @@
 import { Agent } from "@/types";
 import { formatAddress } from "@/lib/utils";
 import { Bot, Wallet, ExternalLink, User, Landmark, DollarSign } from "lucide-react";
+import { useEnsAvatar, useEnsName } from "wagmi";
 import { cn } from "@/lib/utils";
 
 interface AgentCardProps {
@@ -13,6 +14,8 @@ interface AgentCardProps {
 export function AgentCard({ agent, onClick }: AgentCardProps) {
   const hasWallet = agent.walletAddress && agent.walletAddress !== "0x0000000000000000000000000000000000000000";
   const hasPool = agent.poolAddress && agent.poolAddress !== "0x0000000000000000000000000000000000000000";
+  const { data: ownerEnsName } = useEnsName({ address: agent.owner as `0x${string}`, chainId: 1 });
+  const { data: ownerEnsAvatar } = useEnsAvatar({ name: ownerEnsName ?? undefined, chainId: 1 });
 
   let description = "";
   let x402Support = false;
@@ -30,7 +33,14 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-2">
-            <Bot className="w-5 h-5 text-lobster-primary" />
+            <div className="w-8 h-8 rounded-full bg-lobster-surface border border-lobster-border flex items-center justify-center overflow-hidden">
+              {ownerEnsAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={ownerEnsAvatar} alt={ownerEnsName ?? "ENS Avatar"} className="w-full h-full object-cover" />
+              ) : (
+                <Bot className="w-5 h-5 text-lobster-primary" />
+              )}
+            </div>
             <h3 className="font-display text-xl font-semibold text-lobster-dark">
               {agent.name}
             </h3>
@@ -57,7 +67,7 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
       <div className="space-y-2 mb-4 pb-4 border-b border-lobster-border">
         <div className="flex items-center space-x-2 text-xs text-lobster-text/60">
           <User className="w-3 h-3" />
-          <span>Owner: {formatAddress(agent.owner)}</span>
+          <span>Owner: {ownerEnsName ?? formatAddress(agent.owner)}</span>
         </div>
         {hasWallet && (
           <div className="flex items-center space-x-2 text-xs text-lobster-text/60">

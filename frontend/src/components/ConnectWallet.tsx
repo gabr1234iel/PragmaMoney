@@ -1,6 +1,7 @@
 "use client";
 
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useEnsName, useEnsAvatar } from "wagmi";
+import { mainnet } from "wagmi/chains";
 import { useState, useRef, useEffect } from "react";
 import { Wallet, ChevronDown, LogOut } from "lucide-react";
 import { formatAddress } from "@/lib/utils";
@@ -8,6 +9,14 @@ import { BalanceDisplay } from "./BalanceDisplay";
 
 export function ConnectWallet() {
   const { address, isConnected } = useAccount();
+  const { data: ensName } = useEnsName({
+    address,
+    chainId: mainnet.id,
+  });
+  const { data: ensAvatar } = useEnsAvatar({
+    name: ensName ?? undefined,
+    chainId: mainnet.id,
+  });
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -65,11 +74,16 @@ export function ConnectWallet() {
         className="flex items-center space-x-3 px-4 py-2 bg-white border-2 border-[#E7E1EA] rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-200 text-[#1C1B1F]"
       >
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-gradient-lobster rounded-full flex items-center justify-center">
-            <Wallet className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 bg-gradient-lobster rounded-full flex items-center justify-center overflow-hidden">
+            {ensAvatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={ensAvatar} alt={ensName ?? "ENS Avatar"} className="w-full h-full object-cover" />
+            ) : (
+              <Wallet className="w-5 h-5 text-white" />
+            )}
           </div>
           <span className="font-medium text-[#1C1B1F]">
-            {formatAddress(address || "")}
+            {ensName ?? formatAddress(address || "")}
           </span>
         </div>
         <ChevronDown className="w-4 h-4 text-[#5E5A6A]" />
@@ -80,6 +94,11 @@ export function ConnectWallet() {
           <div className="p-4 border-b border-[#E7E1EA]">
             <p className="text-xs text-[#5E5A6A] mb-2">Connected Address</p>
             <p className="font-mono text-sm text-[#1C1B1F]">{address}</p>
+            {ensName && (
+              <p className="mt-2 text-sm text-[#1C1B1F]">
+                ENS: <span className="font-medium">{ensName}</span>
+              </p>
+            )}
           </div>
 
           <div className="p-4 border-b border-[#E7E1EA]">

@@ -1,9 +1,10 @@
 "use client";
 
 import { Service, SERVICE_TYPE_LABELS, SERVICE_TYPE_COLORS } from "@/types";
-import { formatUSDC, truncateText } from "@/lib/utils";
-import { ExternalLink, Zap } from "lucide-react";
+import { formatUSDC, truncateText, formatAddress } from "@/lib/utils";
+import { ExternalLink, Zap, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useEnsName } from "wagmi";
 
 interface ServiceCardProps {
   service: Service;
@@ -13,6 +14,10 @@ interface ServiceCardProps {
 export function ServiceCard({ service, onClick }: ServiceCardProps) {
   const typeLabel = SERVICE_TYPE_LABELS[service.serviceType];
   const typeColor = SERVICE_TYPE_COLORS[service.serviceType];
+  const { data: ownerEnsName } = useEnsName({
+    address: service.owner as `0x${string}`,
+    chainId: 1,
+  });
 
   return (
     <div
@@ -44,6 +49,12 @@ export function ServiceCard({ service, onClick }: ServiceCardProps) {
           {service.description}
         </p>
       )}
+
+      {/* Owner */}
+      <div className="flex items-center space-x-2 text-xs text-lobster-text/60 mb-3">
+        <User className="w-3 h-3" />
+        <span>Owner: {ownerEnsName ?? formatAddress(service.owner)}</span>
+      </div>
 
       {/* Endpoint */}
       <div className="flex items-center space-x-2 text-xs text-lobster-text/60 mb-4 font-mono">
