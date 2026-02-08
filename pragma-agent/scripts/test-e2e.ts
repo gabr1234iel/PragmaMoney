@@ -62,6 +62,7 @@ import {
   buildMintCall,
   buildUpgradeCall,
   buildPermit2ApproveCall,
+  buildPermit2PermitCall,
   buildUniversalRouterExecuteCall,
 } from "../src/userop.js";
 import {
@@ -530,7 +531,8 @@ async function main() {
   console.log("--- Step 13: Agent A does Uniswap V4 swap (RFUSDC → SuperFakeUSDC → BingerToken) ---");
   await new Promise((r) => setTimeout(r, 3000));
 
-  const swapAmount = 1_000_000n; // 1 RFUSDC (6 decimals)
+  const rfusdcAmount = 1_000_000n; // 1 RFUSDC (6 decimals)
+  const superUsdcAmount = rfusdcAmount * 1_000_000_000_000n; // scale to 18 decimals
   const minAmountOut = 1n;
   const router = UNISWAP_UNIVERSAL_ROUTER_ADDRESS as `0x${string}`;
 
@@ -546,7 +548,7 @@ async function main() {
   const swapConfig = {
     poolKey,
     zeroForOne: true,
-    amountIn: swapAmount.toString(),
+    amountIn: superUsdcAmount.toString(),
     amountOutMinimum: minAmountOut.toString(),
     hookData: "0x",
   };
@@ -568,7 +570,7 @@ async function main() {
   const mintResult = await sendUserOp(
     regA.smartAccount as `0x${string}`,
     walletA.privateKey as `0x${string}`,
-    [buildMintCall(RFUSDC_ADDRESS as `0x${string}`, regA.smartAccount as `0x${string}`, swapAmount)],
+    [buildMintCall(RFUSDC_ADDRESS as `0x${string}`, regA.smartAccount as `0x${string}`, rfusdcAmount)],
     { skipSponsorship: true },
   );
   log("mint tx", mintResult.txHash);
@@ -579,7 +581,7 @@ async function main() {
   const approveRfusdcResult = await sendUserOp(
     regA.smartAccount as `0x${string}`,
     walletA.privateKey as `0x${string}`,
-    [buildApproveCall(RFUSDC_ADDRESS as `0x${string}`, SUPER_FAKE_USDC_ADDRESS as `0x${string}`, swapAmount)],
+    [buildApproveCall(RFUSDC_ADDRESS as `0x${string}`, SUPER_FAKE_USDC_ADDRESS as `0x${string}`, rfusdcAmount)],
     { skipSponsorship: true },
   );
   log("approve tx", approveRfusdcResult.txHash);
@@ -590,7 +592,7 @@ async function main() {
   const upgradeResult = await sendUserOp(
     regA.smartAccount as `0x${string}`,
     walletA.privateKey as `0x${string}`,
-    [buildUpgradeCall(SUPER_FAKE_USDC_ADDRESS as `0x${string}`, swapAmount)],
+    [buildUpgradeCall(SUPER_FAKE_USDC_ADDRESS as `0x${string}`, superUsdcAmount)],
     { skipSponsorship: true },
   );
   log("upgrade tx", upgradeResult.txHash);
@@ -608,24 +610,72 @@ async function main() {
   );
   log("approve tx", approvePermit2Result.txHash);
 
-  // 5) Permit2 approve router
+  // 5) Permit2 permit router (EIP-1271 via smart account)
   await new Promise((r) => setTimeout(r, 2000));
-  log("step", "5/6 Permit2 approving router...");
+  log("step", "5/6 Permit2 permit router...");
   const maxUint160 = (1n << 160n) - 1n;
   const maxUint48 = (1n << 48n) - 1n;
-  const permit2ApproveResult = await sendUserOp(
+  const permit2 = new Contract(
+    PERMIT2_ADDRESS,
+    [
+      "function allowance(address owner,address token,address spender) view returns (uint160 amount,uint48 expiration,uint48 nonce)",
+    ],
+    provider,
+  );
+  const allowance = await permit2.allowance(
+    regA.smartAccount,
+    SUPER_FAKE_USDC_ADDRESS,
+    router,
+  );
+  const nonce = BigInt(allowance.nonce ?? allowance[2]);
+  const sigDeadline = BigInt(Math.floor(Date.now() / 1000) + 300);
+
+  const permitSingle = {
+    details: {
+      token: SUPER_FAKE_USDC_ADDRESS as `0x${string}`,
+      amount: maxUint160,
+      expiration: maxUint48,
+      nonce,
+    },
+    spender: router,
+    sigDeadline,
+  };
+
+  const domain = {
+    name: "Permit2",
+    chainId: 84532,
+    verifyingContract: PERMIT2_ADDRESS,
+  };
+  const types = {
+    PermitDetails: [
+      { name: "token", type: "address" },
+      { name: "amount", type: "uint160" },
+      { name: "expiration", type: "uint48" },
+      { name: "nonce", type: "uint48" },
+    ],
+    PermitSingle: [
+      { name: "details", type: "PermitDetails" },
+      { name: "spender", type: "address" },
+      { name: "sigDeadline", type: "uint256" },
+    ],
+  };
+  const walletASigner = new Wallet(walletA.privateKey, provider);
+  const signature = await walletASigner.signTypedData(domain, types, permitSingle);
+
+  const permit2PermitResult = await sendUserOp(
     regA.smartAccount as `0x${string}`,
     walletA.privateKey as `0x${string}`,
-    [buildPermit2ApproveCall(
-      PERMIT2_ADDRESS as `0x${string}`,
-      SUPER_FAKE_USDC_ADDRESS as `0x${string}`,
-      router,
-      maxUint160,
-      maxUint48,
-    )],
+    [
+      buildPermit2PermitCall(
+        PERMIT2_ADDRESS as `0x${string}`,
+        regA.smartAccount as `0x${string}`,
+        permitSingle,
+        signature as `0x${string}`,
+      ),
+    ],
     { skipSponsorship: true },
   );
-  log("permit2 approve tx", permit2ApproveResult.txHash);
+  log("permit2 permit tx", permit2PermitResult.txHash);
 
   // 6) Execute swap on Universal Router
   await new Promise((r) => setTimeout(r, 2000));

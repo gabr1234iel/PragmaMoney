@@ -166,6 +166,34 @@ const PERMIT2_ABI_VIEM = [
     stateMutability: "nonpayable",
     type: "function",
   },
+  {
+    inputs: [
+      { name: "owner", type: "address" },
+      {
+        name: "permitSingle",
+        type: "tuple",
+        components: [
+          {
+            name: "details",
+            type: "tuple",
+            components: [
+              { name: "token", type: "address" },
+              { name: "amount", type: "uint160" },
+              { name: "expiration", type: "uint48" },
+              { name: "nonce", type: "uint48" },
+            ],
+          },
+          { name: "spender", type: "address" },
+          { name: "sigDeadline", type: "uint256" },
+        ],
+      },
+      { name: "signature", type: "bytes" },
+    ],
+    name: "permit",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ] as const;
 
 const POOL_ABI_VIEM = [
@@ -646,6 +674,35 @@ export function buildPermit2ApproveCall(
       abi: PERMIT2_ABI_VIEM,
       functionName: "approve",
       args: [token, spender, amount, expiration] as any,
+    }),
+  };
+}
+
+/**
+ * Build a Permit2 permit call (AllowanceTransfer.permit).
+ */
+export function buildPermit2PermitCall(
+  permit2: `0x${string}`,
+  owner: `0x${string}`,
+  permitSingle: {
+    details: {
+      token: `0x${string}`;
+      amount: bigint;
+      expiration: bigint;
+      nonce: bigint;
+    };
+    spender: `0x${string}`;
+    sigDeadline: bigint;
+  },
+  signature: `0x${string}`
+): Call {
+  return {
+    to: permit2,
+    value: 0n,
+    data: encodeFunctionData({
+      abi: PERMIT2_ABI_VIEM,
+      functionName: "permit",
+      args: [owner, permitSingle, signature] as any,
     }),
   };
 }
